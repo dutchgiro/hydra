@@ -53,8 +53,11 @@ function init_refresh() {
 		success : function(data) {
 			console.log("Got app from hydra succesfully")
 			data = [].concat(data);
-			for (var key in data) {
-				process_app(data[key]);
+			for (var i=0; i < data.length; i++) {
+			    var item = data[i];
+			    for (var key in item) {
+				process_app(item[key]);
+			    }
 			}
 			// for (var i=0; i < data.length; i++) {
 			// 	process_app(data[i]);
