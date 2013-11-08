@@ -53,9 +53,12 @@ function init_refresh() {
 		success : function(data) {
 			console.log("Got app from hydra succesfully")
 			data = [].concat(data);
-			for (var i=0; i < data.length; i++) {
-				process_app(data[i]);
+			for (var key in data) {
+				process_app(data[key]);
 			}
+			// for (var i=0; i < data.length; i++) {
+			// 	process_app(data[i]);
+			// }
 		},
 		error : function(data) {
 			console.log("Error when getting app from hydra: " + data);
@@ -65,8 +68,10 @@ function init_refresh() {
 
 function process_app(app) {
 	servers = app.servers
-	for ( var i = 0; i < servers.length; i++) {
-		var server = servers[i];
+	// for ( var i = 0; i < servers.length; i++) {
+	// 	var server = servers[i];
+	for (var key in servers) {
+		var server = servers[key];
 		console.log("Detected server: " + server.server);
 		var splitted = server.server.split(":");
 		var server_sysmon = splitted[0] + ":" + splitted[1] + ":" + PROBE_PORT + "/extended"
