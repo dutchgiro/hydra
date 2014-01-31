@@ -56,7 +56,8 @@ function init_refresh() {
 			for (var i=0; i < data.length; i++) {
 			    var item = data[i];
 			    for (var key in item) {
-				process_app(item[key]);
+			    	item[key]["appId"] = key;
+					process_app(item[key]);
 			    }
 			}
 			// for (var i=0; i < data.length; i++) {
