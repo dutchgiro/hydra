@@ -1,6 +1,7 @@
 INTERVAL = 0; //5000;
 //INIT_HYDRA_URL = "http://hydra.cloud1.com:7002/app/time";
-INIT_HYDRA_URL = "http://2.hydra.innotechapp.com:443/app";
+//INIT_HYDRA_URL = "http://2.hydra.innotechapp.com:443/app";
+INIT_HYDRA_URL =  "http://liberty-demo-hydra0:8443/app";
 PROBE_PORT = "9099";
 
 var refresh = true;
