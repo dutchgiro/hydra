@@ -21,6 +21,7 @@ func NewApplicationsConfig() *ApplicationsConfig {
 	return a
 }
 
+// Load adds applications configuration to hydra
 func (a *ApplicationsConfig) Load(pathToConfigFile string) error {
 	if err := a.loadAppsFromJSON(pathToConfigFile); err != nil {
 		return err
@@ -28,6 +29,7 @@ func (a *ApplicationsConfig) Load(pathToConfigFile string) error {
 	return nil
 }
 
+// loadAppsFromJSON reads application configuration from json file
 func (a *ApplicationsConfig) loadAppsFromJSON(pathToFile string) error {
 	fileContent, err := ioutil.ReadFile(pathToFile)
 	if err != nil {
@@ -39,6 +41,7 @@ func (a *ApplicationsConfig) loadAppsFromJSON(pathToFile string) error {
 	return nil
 }
 
+// Persists saves application configuration in hydra data store (etcd)
 // TODO: Test
 func (a *ApplicationsConfig) Persists() error {
 	for _, app := range a.Apps {
