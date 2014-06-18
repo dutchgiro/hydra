@@ -1,9 +1,10 @@
 package config
 
 import (
-	"encoding/json"
 	. "github.com/innotech/hydra/model/entity"
 	. "github.com/innotech/hydra/model/repository"
+
+	"encoding/json"
 	"io/ioutil"
 	"log"
 )

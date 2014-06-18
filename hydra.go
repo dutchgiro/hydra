@@ -58,36 +58,36 @@ func main() {
 		connector.SetEtcdConnector(etcd)
 
 		// Private Server API
-		privateHydraListener, err := net.Listen("tcp", conf.PrivateAddr)
+		privateHydraListener, err := net.Listen("tcp", conf.PrivateAPIAddr)
 		if err != nil {
 			log.Fatalf("Failed to create hydra private listener: ", err)
 		}
 		var privateServer = server.NewPrivateServer(privateHydraListener, conf.InstanceExpirationTime)
 		privateServer.RegisterHandlers()
 		go func() {
-			log.Infof("hydra private server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PrivateAddr, "http://"+conf.PrivateAddr)
+			log.Infof("hydra private server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PrivateAPIAddr, "http://"+conf.PrivateAPIAddr)
 			log.Fatal(http.Serve(privateServer.Listener, privateServer.Router))
 		}()
 
 		// Public Server API
 		var loadBalancerFrontendEndpoint string = "ipc://" + conf.Name + "-frontend.ipc"
-		publicHydraListener, err := net.Listen("tcp", conf.PublicAddr)
+		publicHydraListener, err := net.Listen("tcp", conf.PublicAPIAddr)
 		if err != nil {
 			log.Fatalf("Failed to create hydra public listener: ", err)
 		}
 		var publicServer = server.NewPublicServer(publicHydraListener, loadBalancerFrontendEndpoint, conf.BalanceTimeout)
 		publicServer.RegisterHandlers()
 		go func() {
-			log.Infof("hydra public server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PublicAddr, "http://"+conf.PublicAddr)
+			log.Infof("hydra public server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PublicAPIAddr, "http://"+conf.PublicAPIAddr)
 			log.Fatal(http.Serve(publicServer.Listener, publicServer.Router))
 		}()
 
 		// Load applications.
 		var appsConfig = config.NewApplicationsConfig()
-		if _, err := os.Stat(conf.AppsFile); os.IsNotExist(err) {
+		if _, err := os.Stat(conf.AppsFilePath); os.IsNotExist(err) {
 			log.Warnf("Unable to find apps file: %s", err)
 		} else {
-			if err := appsConfig.Load(conf.AppsFile); err != nil {
+			if err := appsConfig.Load(conf.AppsFilePath); err != nil {
 				log.Fatalf("Unable to load applications: %s", err)
 			}
 		}

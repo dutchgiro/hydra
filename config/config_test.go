@@ -5,21 +5,10 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
-	"io/ioutil"
-	"os"
 	"strconv"
 )
 
 var _ = Describe("Config", func() {
-	// HELPERS ////////////////////////////////////////////////////////////////////////
-	WithTempFile := func(content string, fn func(string)) {
-		f, _ := ioutil.TempFile("", "")
-		f.WriteString(content)
-		f.Close()
-		defer os.Remove(f.Name())
-		fn(f.Name())
-	}
-	// END OF HELPERS /////////////////////////////////////////////////////////////////
 	Describe("loading from TOML", func() {
 		Context("when the TOML file exists", func() {
 			const (
@@ -37,8 +26,8 @@ var _ = Describe("Config", func() {
 				NAME                     string = "hydra-0"
 				PEER_1                   string = "192.168.113.101:7001"
 				PEER_2                   string = "192.168.113.102:7001"
-				PRIVATE_ADDR             string = "127.0.0.1:8771"
-				PUBLIC_ADDR              string = "127.0.0.1:8772"
+				PRIVATE_API_ADDR         string = "127.0.0.1:8771"
+				PUBLIC_API_ADDR          string = "127.0.0.1:8772"
 				SNAPSHOT                 bool   = false
 				SNAPSHOT_COUNT           int    = 333
 				VERBOSE                  bool   = false
@@ -65,8 +54,8 @@ var _ = Describe("Config", func() {
 				load_balancer_addr = "` + LOAD_BALANCER_ADDR + `"
 				name = "` + NAME + `"
 				peers = ["` + PEER_1 + `","` + PEER_2 + `"]
-				private_addr = "` + PRIVATE_ADDR + `"
-				public_addr = "` + PUBLIC_ADDR + `"
+				private_api_addr = "` + PRIVATE_API_ADDR + `"
+				public_api_addr = "` + PUBLIC_API_ADDR + `"
 				snapshot = ` + strconv.FormatBool(SNAPSHOT) + `
 				snapshot_count = ` + strconv.FormatInt(int64(SNAPSHOT_COUNT), 10) + `
 				verbose = ` + strconv.FormatBool(VERBOSE) + `
@@ -84,7 +73,7 @@ var _ = Describe("Config", func() {
 				err := c.LoadFile(pathToFile)
 				It("should be loaded successfully", func() {
 					Expect(err).To(BeNil(), "error should be nil")
-					Expect(c.AppsFile).To(Equal(APPS_FILE))
+					Expect(c.AppsFilePath).To(Equal(APPS_FILE))
 					Expect(c.BalanceTimeout).To(Equal(BALANCE_TIMEOUT))
 					Expect(c.BindAddr).To(Equal(BIND_ADDR))
 					Expect(c.CAFile).To(Equal(CA_FILE))
@@ -99,8 +88,8 @@ var _ = Describe("Config", func() {
 					Expect(c.Peers).To(HaveLen(2))
 					Expect(c.Peers).To(ContainElement(PEER_1))
 					Expect(c.Peers).To(ContainElement(PEER_2))
-					Expect(c.PrivateAddr).To(Equal(PRIVATE_ADDR))
-					Expect(c.PublicAddr).To(Equal(PUBLIC_ADDR))
+					Expect(c.PrivateAPIAddr).To(Equal(PRIVATE_API_ADDR))
+					Expect(c.PublicAPIAddr).To(Equal(PUBLIC_API_ADDR))
 					Expect(c.Snapshot).To(Equal(SNAPSHOT))
 					Expect(c.SnapshotCount).To(Equal(SNAPSHOT_COUNT))
 					Expect(c.Verbose).To(Equal(VERBOSE))
@@ -116,43 +105,33 @@ var _ = Describe("Config", func() {
 		})
 	})
 
-	Describe("loading from command flags", func() {
-		Context("when config flag exists", func() {
-			const FLAG_VALUE string = "/etc/hydra/hydra.conf"
-			c := New()
-			c.LoadFlags([]string{"-config", FLAG_VALUE})
-			It("should be loaded successfully", func() {
-				Expect(c.ConfigFilePath).To(Equal(FLAG_VALUE))
-			})
-		})
-	})
-
+	// Check defaults configuration values
 	Describe("loading without flags", func() {
 		Context("when default system cofig file doesn't exist", func() {
 			c := New()
 			It("should be loaded the default configuration successfully", func() {
-				Expect(c.ConfigFilePath).To(Equal(DEFAULT_CONFIG_FILE_PATH))
+				Expect(c.ConfigFilePath).To(Equal("/etc/hydra/hydra.conf"))
 				c.ConfigFilePath = "/no-data-config"
 				err := c.Load([]string{})
 				Expect(err).To(BeNil(), "error should be nil")
-				Expect(c.AppsFile).To(Equal(DEFAULT_APPS_FILE))
-				Expect(c.BalanceTimeout).To(Equal(DEFAULT_BALANCE_TIMEOUT))
-				Expect(c.DataDir).To(Equal(DEFAULT_DATA_DIR))
-				Expect(c.InstanceExpirationTime).To(Equal(DEFAULT_INSTANCE_EXPIRATION_TIME))
-				Expect(c.LoadBalancerAddr).To(Equal(DEFAULT_LOAD_BALANCER_ADDR))
-				Expect(c.Peer.Addr).To(Equal(DEFAULT_PEER_ADDR))
-				Expect(c.Peer.HeartbeatTimeout).To(Equal(DEFAULT_PEER_HEARTBEAT_TIMEOUT))
-				Expect(c.Peer.ElectionTimeout).To(Equal(DEFAULT_PEER_ELECTION_TIMEOUT))
-				Expect(c.PrivateAddr).To(Equal(DEFAULT_PRIVATE_ADDR))
-				Expect(c.PublicAddr).To(Equal(DEFAULT_PUBLIC_ADDR))
-				Expect(c.Snapshot).To(Equal(DEFAULT_SNAPSHOT))
-				Expect(c.SnapshotCount).To(Equal(DEFAULT_SNAPSHOT_COUNT))
-				Expect(c.Verbose).To(Equal(DEFAULT_VERBOSE))
+				Expect(c.AppsFilePath).To(Equal("/etc/hydra/apps.json"))
+				Expect(c.BalanceTimeout).To(Equal(2500))
+				Expect(c.DataDir).To(Equal("/tmp/hydra"))
+				Expect(c.InstanceExpirationTime).To(Equal(30))
+				Expect(c.LoadBalancerAddr).To(Equal("*:7777"))
+				Expect(c.Peer.Addr).To(Equal("127.0.0.1:7701"))
+				Expect(c.Peer.HeartbeatTimeout).To(Equal(50))
+				Expect(c.Peer.ElectionTimeout).To(Equal(200))
+				Expect(c.PrivateAPIAddr).To(Equal("127.0.0.1:7771"))
+				Expect(c.PublicAPIAddr).To(Equal("127.0.0.1:7772"))
+				Expect(c.Snapshot).To(Equal(true))
+				Expect(c.SnapshotCount).To(Equal(20000))
+				Expect(c.Verbose).To(Equal(false))
 			})
 		})
 		Context("when default system cofig file exists", func() {
-			systemPublicAddr := DEFAULT_PUBLIC_ADDR + "0"
-			systemFileContent := `public_addr = "` + systemPublicAddr + `"`
+			systemPublicAPIAddr := "127.0.0.1:77710"
+			systemFileContent := `public_api_addr = "` + systemPublicAPIAddr + `"`
 			WithTempFile(systemFileContent, func(pathToSystemFile string) {
 				c := New()
 				c.ConfigFilePath = pathToSystemFile
@@ -161,7 +140,7 @@ var _ = Describe("Config", func() {
 					Expect(err).To(BeNil(), "error should be nil")
 				})
 				It("should be override the default configuration", func() {
-					Expect(c.PublicAddr).To(Equal(systemPublicAddr), "c.Addr should be equal "+systemPublicAddr)
+					Expect(c.PublicAPIAddr).To(Equal(systemPublicAPIAddr), "c.Addr should be equal "+systemPublicAPIAddr)
 				})
 			})
 		})
@@ -187,6 +166,15 @@ var _ = Describe("Config", func() {
 				Expect(c.EtcdAddr).To(Equal(ETCD_ADDR))
 			})
 		})
+		Context("When -apps-file flag exists", func() {
+			const APPS_FILE string = "/tmp/apps.json"
+			c := New()
+			err := c.LoadFlags([]string{"-apps-file", APPS_FILE})
+			It("should be loaded successfully", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c.AppsFilePath).To(Equal(APPS_FILE))
+			})
+		})
 		Context("When -balance-timeout flag exists", func() {
 			const BALANCE_TIMEOUT int = 4000
 			c := New()
@@ -203,15 +191,6 @@ var _ = Describe("Config", func() {
 			It("should be loaded successfully", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c.BindAddr).To(Equal(BIND_ADDR))
-			})
-		})
-		Context("When -apps-file flag exists", func() {
-			const APPS_FILE string = "/tmp/apps.json"
-			c := New()
-			err := c.LoadFlags([]string{"-apps-file", APPS_FILE})
-			It("should be loaded successfully", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c.AppsFile).To(Equal(APPS_FILE))
 			})
 		})
 		Context("When -ca-file flag exists", func() {
@@ -239,15 +218,6 @@ var _ = Describe("Config", func() {
 			It("should be loaded successfully", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c.DataDir).To(Equal(DATA_DIR))
-			})
-		})
-		Context("When -discovery flag exists", func() {
-			const DISCOVERY string = "http://etcd.local:4001/v2/keys/_etcd/registry/examplecluster_1"
-			c := New()
-			err := c.LoadFlags([]string{"-discovery", DISCOVERY})
-			It("should be loaded successfully", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c.Discovery).To(Equal(DISCOVERY))
 			})
 		})
 		Context("When -discovery flag exists", func() {
@@ -302,6 +272,15 @@ var _ = Describe("Config", func() {
 				Expect(c.LoadBalancerAddr).To(Equal(LOAD_BALANCER_ADDR))
 			})
 		})
+		Context("When -name flag exists", func() {
+			const NAME string = "test-0"
+			c := New()
+			err := c.LoadFlags([]string{"-name", NAME})
+			It("should be loaded successfully", func() {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c.Name).To(Equal(NAME))
+			})
+		})
 		Context("When -peer-addr flag exists", func() {
 			const PEER_ADDR string = "127.0.0.1:8001"
 			c := New()
@@ -329,7 +308,7 @@ var _ = Describe("Config", func() {
 				Expect(c.Peer.CAFile).To(Equal(PEER_CA_FILE))
 			})
 		})
-		Context("When -peer-heartbeat-timeout flag exists", func() {
+		Context("When -peer-cert-file flag exists", func() {
 			const PEER_CERT_FILE string = "./fixtures/ca/peer_server.crt"
 			c := New()
 			err := c.LoadFlags([]string{"-peer-cert-file", PEER_CERT_FILE})
@@ -338,8 +317,8 @@ var _ = Describe("Config", func() {
 				Expect(c.Peer.CertFile).To(Equal(PEER_CERT_FILE))
 			})
 		})
-		Context("When -peer-cert-file flag exists", func() {
-			const PEER_KEY_FILE string = "./fixtures/ca/peer_server.key.insecure"
+		Context("When -peer-key-file flag exists", func() {
+			const PEER_KEY_FILE string = "./fixtures/ca/peer_server_1.key.insecure"
 			c := New()
 			err := c.LoadFlags([]string{"-peer-key-file", PEER_KEY_FILE})
 			It("should be loaded successfully", func() {
@@ -377,22 +356,22 @@ var _ = Describe("Config", func() {
 				Expect(c.Peers).To(ContainElement(PEER_2))
 			})
 		})
-		Context("When -private-addr flag exists", func() {
-			const PRIVATE_ADDR string = "localhost:4444"
+		Context("When -private-api-addr flag exists", func() {
+			const PRIVATE_API_ADDR string = "localhost:4444"
 			c := New()
-			err := c.LoadFlags([]string{"-private-addr", PRIVATE_ADDR})
+			err := c.LoadFlags([]string{"-private-api-addr", PRIVATE_API_ADDR})
 			It("should be loaded successfully", func() {
 				Expect(err).NotTo(HaveOccurred())
-				Expect(c.PrivateAddr).To(Equal(PRIVATE_ADDR))
+				Expect(c.PrivateAPIAddr).To(Equal(PRIVATE_API_ADDR))
 			})
 		})
-		Context("When -public-addr flag exists", func() {
-			const PUBLIC_ADDR string = "localhost:5555"
+		Context("When -public-api-addr flag exists", func() {
+			const PUBLIC_API_ADDR string = "localhost:5555"
 			c := New()
-			err := c.LoadFlags([]string{"-public-addr", PUBLIC_ADDR})
+			err := c.LoadFlags([]string{"-public-api-addr", PUBLIC_API_ADDR})
 			It("should be loaded successfully", func() {
 				Expect(err).NotTo(HaveOccurred())
-				Expect(c.PublicAddr).To(Equal(PUBLIC_ADDR))
+				Expect(c.PublicAPIAddr).To(Equal(PUBLIC_API_ADDR))
 			})
 		})
 		Context("When -snapshot flag exists", func() {
@@ -422,21 +401,12 @@ var _ = Describe("Config", func() {
 				Expect(c.Verbose).To(BeTrue())
 			})
 		})
-		Context("When -name flag exists", func() {
-			const NAME string = "test-0"
-			c := New()
-			err := c.LoadFlags([]string{"-name", NAME})
-			It("should be loaded successfully", func() {
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c.Name).To(Equal(NAME))
-			})
-		})
-		Context("when config flag exists", func() {
+		Context("when -config flag exists", func() {
 			Context("and no more flags exist", func() {
-				systemPublicAddr := DEFAULT_PUBLIC_ADDR + "0"
-				systemFileContent := `public_addr = "` + systemPublicAddr + `"`
-				customPublicAddr := systemPublicAddr + "0"
-				customFileContent := `public_addr = "` + customPublicAddr + `"`
+				systemPublicAPIAddr := "127.0.0.1:87720"
+				systemFileContent := `public_api_addr = "` + systemPublicAPIAddr + `"`
+				customPublicAPIAddr := systemPublicAPIAddr + "0"
+				customFileContent := `public_api_addr = "` + customPublicAPIAddr + `"`
 				WithTempFile(systemFileContent, func(pathToSystemFile string) {
 					WithTempFile(customFileContent, func(pathToCustomFile string) {
 						c := New()
@@ -447,40 +417,40 @@ var _ = Describe("Config", func() {
 							Expect(c.ConfigFilePath).To(Equal(pathToSystemFile))
 						})
 						It("should be override the default configuration loaded from default system configuration file", func() {
-							Expect(c.PublicAddr).To(Equal(customPublicAddr), "c.Addr should be equal "+customPublicAddr)
+							Expect(c.PublicAPIAddr).To(Equal(customPublicAPIAddr), "c.Addr should be equal "+customPublicAPIAddr)
 						})
 					})
 				})
 			})
 			Context("and also more valid flags exist", func() {
-				customPublicAddr := DEFAULT_PUBLIC_ADDR + "0"
-				customFileContent := `public_addr = "` + customPublicAddr + `"`
-				addrCustomFlag := customPublicAddr + "0"
+				customPublicAPIAddr := "127.0.0.1:87720"
+				customFileContent := `public_api_addr = "` + customPublicAPIAddr + `"`
+				addrCustomFlag := customPublicAPIAddr + "0"
 				WithTempFile(customFileContent, func(pathToCustomFile string) {
 					c := New()
-					err := c.Load([]string{"-public-addr", addrCustomFlag, "-config", pathToCustomFile})
+					err := c.Load([]string{"-public-api-addr", addrCustomFlag, "-config", pathToCustomFile})
 					It("should be loaded successfully", func() {
 						Expect(err).To(BeNil(), "error should be nil")
 					})
 					It("should be override the configuration loaded from custom configuration file", func() {
-						Expect(c.PublicAddr).To(Equal(addrCustomFlag), "c.Addr should be equal "+addrCustomFlag)
+						Expect(c.PublicAPIAddr).To(Equal(addrCustomFlag), "c.Addr should be equal "+addrCustomFlag)
 					})
 				})
 			})
 		})
 		Context("when default system cofig file doesn't exist", func() {
-			systemPublicAddr := DEFAULT_PUBLIC_ADDR + "0"
-			systemFileContent := `public_addr = "` + systemPublicAddr + `"`
-			customPublicAddr := systemPublicAddr + "0"
+			systemPublicAPIAddr := "127.0.0.1:87720"
+			systemFileContent := `public_api_addr = "` + systemPublicAPIAddr + `"`
+			customPublicAPIAddr := systemPublicAPIAddr + "0"
 			WithTempFile(systemFileContent, func(pathToSystemFile string) {
 				c := New()
 				c.ConfigFilePath = pathToSystemFile
-				err := c.Load([]string{"-public-addr", customPublicAddr})
+				err := c.Load([]string{"-public-api-addr", customPublicAPIAddr})
 				It("should be loaded successfully", func() {
 					Expect(err).To(BeNil(), "error should be nil")
 				})
 				It("should be override the default configuration loaded from default system configuration file", func() {
-					Expect(c.PublicAddr).To(Equal(customPublicAddr), "c.Addr should be equal "+customPublicAddr)
+					Expect(c.PublicAPIAddr).To(Equal(customPublicAPIAddr), "c.Addr should be equal "+customPublicAPIAddr)
 				})
 			})
 		})
@@ -519,6 +489,7 @@ var _ = Describe("Config", func() {
 			c.EtcdAddr = "127.0.0.1:4411"
 			c.KeyFile = "./fixtures/ca/server.key.insecure"
 			c.Peer.Addr = "127.0.0.1:7711"
+			c.Peer.BindAddr = "127.0.0.1:7722"
 			c.Peer.CAFile = "./fixtures/ca/peer-server-chain.pem"
 			c.Peer.CertFile = "./fixtures/ca/peerserver.crt"
 			c.Peer.KeyFile = "./fixtures/ca/peerserver.key.insecure"
@@ -532,6 +503,7 @@ var _ = Describe("Config", func() {
 				Expect(c.EtcdConf.Addr).To(Equal("https://" + c.EtcdAddr))
 				Expect(c.EtcdConf.KeyFile).To(Equal(c.KeyFile))
 				Expect(c.EtcdConf.Peer.Addr).To(Equal("https://" + c.Peer.Addr))
+				Expect(c.EtcdConf.Peer.BindAddr).To(Equal(c.Peer.BindAddr))
 				Expect(c.EtcdConf.Peer.CAFile).To(Equal(c.Peer.CAFile))
 				Expect(c.EtcdConf.Peer.CertFile).To(Equal(c.Peer.CertFile))
 				Expect(c.EtcdConf.Peer.KeyFile).To(Equal(c.Peer.KeyFile))

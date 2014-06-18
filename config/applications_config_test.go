@@ -5,22 +5,9 @@ import (
 	. "github.com/innotech/hydra/model/entity"
 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
-
-	"io/ioutil"
-	"os"
 )
 
 var _ = Describe("ApplicationsConfig", func() {
-	// TODO: Join with the config test helpers
-	// HELPERS ////////////////////////////////////////////////////////////////////////
-	WithTempFile := func(content string, fn func(string)) {
-		f, _ := ioutil.TempFile("", "")
-		f.WriteString(content)
-		f.Close()
-		defer os.Remove(f.Name())
-		fn(f.Name())
-	}
-	// END OF HELPERS /////////////////////////////////////////////////////////////////
 	fileContent := `[{
 			"dummy1": {
 				"Balancers": [
