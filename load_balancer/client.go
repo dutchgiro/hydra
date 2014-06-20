@@ -5,7 +5,6 @@ import (
 	"time"
 
 	zmq "github.com/innotech/hydra/vendors/github.com/alecthomas/gozmq"
-	uuid "github.com/innotech/hydra/vendors/github.com/nu7hatch/gouuid"
 )
 
 type Requester interface {
@@ -39,14 +38,14 @@ func (self *client) connect() {
 	}
 
 	self.socket, _ = self.context.NewSocket(zmq.REQ)
-	// TODO: I think that uuid is not necessary for Router
-	identityUUID, _ := uuid.NewV4()
-	identity := identityUUID.String()
-	self.socket.SetIdentity(identity)
 	self.socket.SetLinger(0)
 	self.socket.Connect(self.server)
+	if err := self.socket.SetRcvTimeout(self.requestTimeout); err != nil {
+		log.Println(err)
+	}
 }
 
+// Close socket and context connections
 func (self *client) Close() {
 	if self.socket != nil {
 		self.socket.Close()
@@ -54,12 +53,9 @@ func (self *client) Close() {
 	self.context.Close()
 }
 
+// Send dispatchs requests to load balancer server and returns the response message
 func (self *client) Send(service []byte, request [][]byte) (reply [][]byte) {
 	frame := append([][]byte{service}, request...)
-
-	if err := self.socket.SetRcvTimeout(self.requestTimeout); err != nil {
-		log.Println(err)
-	}
 
 	self.socket.SendMultipart(frame, zmq.NOBLOCK)
 	msg, _ := self.socket.RecvMultipart(0)
