@@ -99,7 +99,8 @@ func main() {
 		}
 
 		// Load Balancer
-		loadBalancer := load_balancer.NewLoadBalancer(loadBalancerFrontendEndpoint, "tcp://"+conf.LoadBalancerAddr)
+		var inprocBackendEndpoint string = "ipc://" + conf.Name + "-backend.ipc"
+		loadBalancer := load_balancer.NewLoadBalancer(loadBalancerFrontendEndpoint, "tcp://"+conf.LoadBalancerAddr, inprocBackendEndpoint)
 		defer loadBalancer.Close()
 		loadBalancer.Run()
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"reflect"
+	"strconv"
 	"time"
 
 	zmq "github.com/innotech/hydra/vendors/github.com/alecthomas/gozmq"
@@ -275,7 +276,12 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 		} else {
 			//  Attach worker to service and mark as idle
 			worker.service = self.requireService(string(service))
-			worker.priorityLevel = int(priorityLevel)
+			priorityLevelInt, err := strconv.Atoi(string(priorityLevel))
+			if err != nil {
+				log.Warn("The priority level of a worker must be an integer")
+				self.deleteWorker(worker, true)
+			}
+			worker.priorityLevel = priorityLevelInt
 			self.workerWaiting(worker)
 		}
 	case SIGNAL_REPLY:

@@ -36,7 +36,6 @@ func GetEtcdConnector() *EtcdConnector {
 
 func (e EtcdConnector) Delete(key string, dir, recursive bool) error {
 	return nil
-
 }
 
 func (e EtcdConnector) Get(key string, recursive bool, sort bool) (*store.Event, error) {

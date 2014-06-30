@@ -5,17 +5,17 @@
 go test -i ./config
 go test -v ./config
 
-go test -i ./model/entity
-go test -v ./model/entity
+# go test -i ./model/entity
+# go test -v ./model/entity
 
 # go test -i ./load_balancer
 # go test -v ./load_balancer
 
-go test -i ./server
-go test -v ./server
+# go test -i ./server
+# go test -v ./server
 
-go test -i ./server/controller
-go test -v ./server/controller
+# go test -i ./server/controller
+# go test -v ./server/controller
 
 # go test -i ./tests/functional/api
 # HYDRA_BIN_PATH=$(pwd)/bin/hydra go test -v ./tests/functional/api
