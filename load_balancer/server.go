@@ -258,12 +258,14 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 			expiry:   time.Now().Add(HEARTBEAT_EXPIRY),
 		}
 		self.workers[identity] = worker
+		log.Debugf("Worker: %#v", worker)
 	}
 
 	switch string(command) {
 	case SIGNAL_READY:
-		//  At least, a service name and priority level
-		if len(msg) < 2 {
+		log.Debug("SIGNAL_READY")
+		//  At least, a service name
+		if len(msg) < 1 {
 			log.Warn("Invalid message from worker, service name is missing")
 			self.deleteWorker(worker, true)
 			return
@@ -282,9 +284,13 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 				self.deleteWorker(worker, true)
 			}
 			worker.priorityLevel = priorityLevelInt
+			for len(worker.service.waiting)-1 < priorityLevelInt {
+				worker.service.waiting = append(worker.service.waiting, NewList())
+			}
 			self.workerWaiting(worker)
 		}
 	case SIGNAL_REPLY:
+		log.Debug("SIGNAL_REPLY")
 		if workerReady {
 			//  Remove & save client return envelope and insert the
 			//  protocol header and service name, then rewrap envelope.
@@ -297,12 +303,14 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 			self.deleteWorker(worker, true)
 		}
 	case SIGNAL_HEARTBEAT:
+		log.Debug("SIGNAL_HEARTBEAT")
 		if workerReady {
 			worker.expiry = time.Now().Add(HEARTBEAT_EXPIRY)
 		} else {
 			self.deleteWorker(worker, true)
 		}
 	case SIGNAL_DISCONNECT:
+		log.Debug("SIGNAL_DISCONNECT")
 		self.deleteWorker(worker, false)
 	default:
 		log.Warn("Invalid message in Load Balancer")
@@ -315,10 +323,10 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 //  Workers are oldest to most recent, so we stop at the first alive worker.
 func (self *loadBalancer) purgeWorkers() {
 	now := time.Now()
-	for elem := self.waiting.Front(); elem != nil; elem = self.waiting.Front() {
+	for elem := self.waiting.Front(); elem != nil; elem = elem.Next() {
 		worker, _ := elem.Value.(*lbWorker)
 		if worker.expiry.After(now) {
-			break
+			continue
 		}
 		self.deleteWorker(worker, false)
 	}
