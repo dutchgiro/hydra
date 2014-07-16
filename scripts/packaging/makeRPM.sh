@@ -15,9 +15,9 @@ cp ../../bin/hydra ~/rpmbuild/SOURCES/hydra-core-3
 cp hydra-core.spec ~/rpmbuild/SPECS
 
 pushd ~/rpmbuild/SOURCES/
-tar czf hydra-core-3.0.tar.gz hydra-core-3/
+tar czf hydra-core-3.1.tar.gz hydra-core-3/
 cd ~/rpmbuild 
 rpmbuild -ba SPECS/hydra-core.spec
 
 popd
-cp ~/rpmbuild/RPMS/x86_64/hydra-core-3-0.x86_64.rpm .
+cp ~/rpmbuild/RPMS/x86_64/hydra-core-3-1.x86_64.rpm .
