@@ -24,13 +24,14 @@ Finally, there is web monitor that connects to an Hydra Server an print all the 
 
 To use Hydra, you need to deploy: 
 * At least one Hydra server (per cloud prefered) to comunicate your applications to the world.
-* An Hydra Basic Probe on each single server your application is deployed in. 
+* An Hydra Basic Probe on each single server your application is deployed in.
+* And many Hydra Workers as you need to balance your applications.
 
 For information on how to deploy each individual piece, check out their respective repositories.
 
 # Hydra Server
 
-The Hydra server is also composed by one core application and one or more add-ons. These add-ons are "workers" and Hydra use them in order to delegate the balance calculation. You can deploy as many workers as you want in the same server than Hydra or in different servers. The communication between Hydra Core and the workers is made with a TCP connection using ZeroMQ.
+The Hydra server is also composed by one core application and one or more add-ons. These add-ons are "workers" and Hydra use them in order to delegate the balance calculation. You can deploy as many workers as you want in the same server than Hydra or in different servers. The communication between Hydra Core and the remote workers is made with a TCP connection and between local workers is used the IPC mechanism is currently only implemented on operating systems that provide UNIX domain sockets, both are using ZeroMQ.
 
 ## Hydra Core
 * <a href="https://github.com/innotech/hydra/blob/master/Documentation/configuration.md">Instalation and Configuration</a>
