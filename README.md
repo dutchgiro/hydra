@@ -44,6 +44,12 @@ The Hydra server is also composed by one core application and one or more add-on
 * <a href="https://github.com/innotech/hydra-worker-sort-by-number">Sort by Number Workder</a>
 * <a href="https://github.com/innotech/hydra-worker-map-by-limit">Map by Limir Worker</a>
 
+## Hydra Worker Libraries
+
+**Go libraries**
+
+- [hydra-worker-lib](https://github.com/innotech/hydra-worker-lib)
+
 # License
 
 (The MIT License)
