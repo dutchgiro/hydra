@@ -11,7 +11,7 @@ It attempts to ease the routing and balancing burden from servers and delegate i
 
 Hydra is composed of 3 server-side components:
 * <a href="https://github.com/innotech/hydra">Hydra Server (This repository)</a>
-* [Hydra Workers](#hydra-worker-round-robin)
+* [Hydra Workers](#hydra-workers)
 * <a href="https://github.com/innotech/hydra-basic-probe">Hydra Basic Probe</a>
 
 Also there is several client-side library:
@@ -37,8 +37,8 @@ The Hydra server is also composed by one core application and one or more add-on
 * <a href="https://github.com/innotech/hydra/blob/master/Documentation/development_enviroment.md">Development Environment</a>
 * <a href="https://github.com/innotech/hydra/blob/master/Documentation/roadmap.md">Roadmap</a>
 
-## Hydra Workers
-* <a href="https://github.com/innotech/hydra-worker-round-robin" id="hydra-worker-round-robin">Round Robin Worker</a>
+## <a id="hydra-workers"></a>Hydra Workers
+* <a href="https://github.com/innotech/hydra-worker-round-robin">Round Robin Worker</a>
 * <a href="https://github.com/innotech/hydra-worker-map-sort">Map and Sort Worker</a>
 * <a href="https://github.com/innotech/hydra-worker-sort-by-number">Sort by Number Workder</a>
 * <a href="https://github.com/innotech/hydra-worker-map-by-limit">Map by Limir Worker</a>
