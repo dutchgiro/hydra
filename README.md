@@ -11,7 +11,7 @@ It attempts to ease the routing and balancing burden from servers and delegate i
 
 Hydra is composed of 3 server-side components:
 * <a href="https://github.com/innotech/hydra">Hydra Server (This repository)</a>
-* <a href="https://github.com/innotech/hydra#hydra-worker-round-robin">Hydra Workers</a>
+* [Hydra Workers](#hydra-worker-round-robin)
 * <a href="https://github.com/innotech/hydra-basic-probe">Hydra Basic Probe</a>
 
 Also there is several client-side library:
