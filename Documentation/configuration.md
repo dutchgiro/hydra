@@ -8,12 +8,12 @@ https://launchpad.net/~chris-lea/+archive/zeromq
   
 and execute:  
 ```
-sudo dpkg -i hydra-3-0.x86_64.deb
+sudo dpkg -i hydra-3-1.x86_64.deb
 sudo apt-get install -f
 ```
 ## CentOS/RedHat/Fedora
 ```
-sudo yum install libzmq3-3.2.2-13.1.x86_64.rpm hydra-3-0.x86_64.rpm
+sudo yum install libzmq3-3.2.2-13.1.x86_64.rpm hydra-3-1.x86_64.rpm
 ```
 
 ## Run
@@ -104,7 +104,7 @@ election_timeout = 200
 
 # Applications Configuration
 
-The applications settings ("/etc/init.d/apps.json") allow to define for each application how they will be balanced by specifying the (balancers) workers that will be part of the chain and their arguments. For example:
+The applications settings ("/etc/hydra/apps.json") allow to define for each application how they will be balanced by specifying the (balancers) workers that will be part of the chain and their arguments. For example:
 
 
 ```JSON
