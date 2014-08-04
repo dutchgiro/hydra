@@ -1,0 +1,31 @@
+[{
+    "app1": {
+        "Balancers": [
+            {
+                "worker": "MapAndSort",
+                "mapAttr": "cloud",
+                "mapSort": ["google", "amazon", "azure"]
+            },
+            {
+                "worker": "SortByNumber",
+                "sortAttr": "cpuLoad",
+                "order": 1
+            }
+        ]
+    }
+}, {
+    "app2": {
+        "Balancers": [
+            {
+                "worker": "MapByLimit",
+                "limitAttr": "limit",
+                "limitValue": 50,
+                "mapSort": "reverse"
+            },
+            {
+                "worker": "RoundRobin",
+                "simple": "OK"
+            }
+        ]
+    }
+}]
