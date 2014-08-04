@@ -133,7 +133,7 @@ The applications settings ("/etc/hydra/apps.json") allow to define for each appl
 				"mapSort": "reverse"
 			},
 			{
-				"worker": "RoundRobin"
+				"worker": "RoundRobin",
 				"simple": "OK"
 			}
 		]
