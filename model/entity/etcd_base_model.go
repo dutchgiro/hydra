@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strconv"
@@ -146,6 +147,96 @@ func (e EtcdBaseModel) ExportEtcdOperations() (map[string]string, error) {
 	return operations, nil
 }
 
+func CastStringToInterface(s string) (interface{}, error) {
+	var i interface{}
+	var err error
+
+	i, err = strconv.Atoi(s)
+	if err == nil {
+		return i, nil
+	}
+	i, err = strconv.ParseFloat(s, 64)
+	if err == nil {
+		return i, nil
+	}
+	i, err = strconv.ParseBool(s)
+	if err == nil {
+		return i, nil
+	}
+	if s == "" {
+		return nil, nil
+	}
+	return s, nil
+}
+
+func (e *EtcdBaseModel) ToJsonableMap() (map[string]interface{}, error) {
+	var checkMapKeysAsInteger func(map[string]interface{}) bool
+	var processSlice func(map[string]interface{}) ([]interface{}, error)
+	var processInterface func(interface{}) (interface{}, error)
+	var processMap func(map[string]interface{}) (map[string]interface{}, error)
+
+	checkMapKeysAsInteger = func(mp map[string]interface{}) bool {
+		for key, _ := range mp {
+			_, err := strconv.Atoi(key)
+			if err != nil {
+				return false
+			}
+		}
+		return true
+	}
+
+	processSlice = func(mapToProcess map[string]interface{}) ([]interface{}, error) {
+		finalSliceSize := len(mapToProcess)
+		finalSlice := make([]interface{}, finalSliceSize, finalSliceSize)
+		for key, value := range mapToProcess {
+			v, err := processInterface(value)
+			if err != nil {
+				return nil, err
+			}
+			i, _ := strconv.Atoi(key)
+			finalSlice[i] = v
+		}
+		return finalSlice, nil
+	}
+
+	processInterface = func(in interface{}) (interface{}, error) {
+		var intrfac interface{}
+		var err error
+
+		switch reflect.ValueOf(in).Kind() {
+		case reflect.Map:
+			if checkMapKeysAsInteger(in.(map[string]interface{})) {
+				intrfac, err = processSlice(in.(map[string]interface{}))
+			} else {
+				intrfac, err = processMap(in.(map[string]interface{}))
+			}
+		default:
+			intrfac, err = CastStringToInterface(in.(string))
+		}
+		return intrfac, err
+	}
+
+	processMap = func(mapToProcess map[string]interface{}) (map[string]interface{}, error) {
+		finalMap := make(map[string]interface{})
+		for key, value := range mapToProcess {
+			v, err := processInterface(value)
+			if err != nil {
+				return nil, err
+			}
+			finalMap[key] = v
+		}
+		return finalMap, nil
+	}
+
+	eP := map[string]interface{}(*e)
+	jsonMap, err := processMap(eP)
+	if err != nil {
+		return nil, err
+	}
+
+	return jsonMap, nil
+}
+
 func (e *EtcdBaseModel) Explode() (string, map[string]interface{}, error) {
 	eP := map[string]interface{}(*e)
 	if len(eP) != 1 {
@@ -155,4 +246,27 @@ func (e *EtcdBaseModel) Explode() (string, map[string]interface{}, error) {
 		return key, value.(map[string]interface{}), nil
 	}
 	return "", nil, nil
+}
+
+func (e *EtcdBaseModel) ToJson() ([]byte, error) {
+	mp, err := e.ToJsonableMap()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(mp)
+}
+
+func (e *EtcdBaseModels) ToJson() ([]byte, error) {
+	sliceSize := len([]EtcdBaseModel(*e))
+	s := make([]map[string]interface{}, sliceSize, sliceSize)
+	i := 0
+	for _, value := range []EtcdBaseModel(*e) {
+		v, err := value.ToJsonableMap()
+		if err != nil {
+			return nil, err
+		}
+		s[i] = v
+		i++
+	}
+	return json.Marshal(s)
 }

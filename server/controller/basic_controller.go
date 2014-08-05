@@ -100,7 +100,8 @@ func (a *BasicController) Get(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
-	jsonOutput, err := json.Marshal(app)
+	// jsonOutput, err := json.Marshal(app)
+	jsonOutput, err := app.ToJson()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
@@ -117,7 +118,8 @@ func (a *BasicController) List(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
-	jsonOutput, err := json.Marshal(apps)
+	// jsonOutput, err := json.Marshal(apps)
+	jsonOutput, err := apps.ToJson()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return

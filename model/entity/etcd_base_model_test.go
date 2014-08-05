@@ -138,6 +138,95 @@ var _ = Describe("EtcdBaseModel", func() {
 		})
 	})
 
+	Describe("Getting json from EtcdBaseModel", func() {
+		model := map[string]interface{}{
+			"app1": map[string]interface{}{
+				"Balancers": map[string]interface{}{
+					"0": map[string]interface{}{
+						"mapAttr": "cloud",
+						"mapSort": map[string]interface{}{
+							"0": "google",
+							"1": "amazon",
+							"2": "azure",
+						},
+						"worker": "MapAndSort",
+					},
+					"1": map[string]interface{}{
+						"reverse":  "true",
+						"isValid":  "false",
+						"decimal":  "55.19",
+						"order":    "1.00",
+						"sortAttr": "cpuLoad",
+						"worker":   "SortByNumber",
+					},
+				},
+			},
+		}
+		m := EtcdBaseModel(model)
+		json, err := m.ToJson()
+		It("should be got a jsonable map of interfaces", func() {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(json)).To(Equal(`{"app1":{"Balancers":[{"mapAttr":"cloud","mapSort":["google","amazon","azure"],"worker":"MapAndSort"},{"decimal":55.19,"isValid":false,"order":1,"reverse":true,"sortAttr":"cpuLoad","worker":"SortByNumber"}]}}`))
+		})
+	})
+
+	Describe("Getting json from EtcdBaseModels", func() {
+		model := []EtcdBaseModel{
+			EtcdBaseModel(map[string]interface{}{
+				"app1": map[string]interface{}{
+					"Balancers": map[string]interface{}{
+						"0": map[string]interface{}{
+							"mapAttr": "cloud",
+							"mapSort": map[string]interface{}{
+								"0": "google",
+								"1": "amazon",
+								"2": "azure",
+							},
+							"worker": "MapAndSort",
+						},
+						"1": map[string]interface{}{
+							"reverse":  "true",
+							"isValid":  "false",
+							"decimal":  "55.19",
+							"order":    "1.00",
+							"sortAttr": "cpuLoad",
+							"worker":   "SortByNumber",
+						},
+					},
+				},
+			}),
+			EtcdBaseModel(map[string]interface{}{
+				"app2": map[string]interface{}{
+					"Balancers": map[string]interface{}{
+						"0": map[string]interface{}{
+							"mapAttr": "cloud",
+							"mapSort": map[string]interface{}{
+								"0": "google",
+								"1": "amazon",
+								"2": "azure",
+							},
+							"worker": "MapAndSort",
+						},
+						"1": map[string]interface{}{
+							"reverse":  "true",
+							"isValid":  "false",
+							"decimal":  "55.19",
+							"order":    "1.00",
+							"sortAttr": "cpuLoad",
+							"worker":   "SortByNumber",
+						},
+					},
+				},
+			}),
+		}
+		m := EtcdBaseModels(model)
+		json, err := m.ToJson()
+		It("should be got a jsonable map of interfaces", func() {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(json)).To(Equal(`[{"app1":{"Balancers":[{"mapAttr":"cloud","mapSort":["google","amazon","azure"],"worker":"MapAndSort"},{"decimal":55.19,"isValid":false,"order":1,"reverse":true,"sortAttr":"cpuLoad","worker":"SortByNumber"}]}},{"app2":{"Balancers":[{"mapAttr":"cloud","mapSort":["google","amazon","azure"],"worker":"MapAndSort"},{"decimal":55.19,"isValid":false,"order":1,"reverse":true,"sortAttr":"cpuLoad","worker":"SortByNumber"}]}}]`))
+		})
+	})
+
 	Context("When store is not empty", func() {
 		event := &store.Event{
 			Action: "get",
