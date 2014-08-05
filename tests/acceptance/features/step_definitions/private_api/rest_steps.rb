@@ -21,5 +21,8 @@ Then(/^the response should be (\d+) .*$/) do |status_code|
 end
 
 Then(/^the response should be JSON:$/) do |json|
+	pp json
+	pp JSON.parse(@last_response.body)
+	pp JSON.parse(json)
   JSON.parse(@last_response.body).should == JSON.parse(json)
 end

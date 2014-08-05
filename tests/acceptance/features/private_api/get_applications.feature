@@ -26,7 +26,12 @@ Feature: Getting list of applications
                   {
                       "worker": "SortByNumber",
                       "sortAttr": "cpuLoad",
-                      "order": 1
+                      "order": 1,
+                      "reverse": true,
+                      "isValid": false,
+                      "decimal": 55.19,
+                      "sortAttr": "cpuLoad",
+                      "worker": "SortByNumber"
                   }
               ]
           }

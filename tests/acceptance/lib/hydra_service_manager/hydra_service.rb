@@ -43,16 +43,18 @@ class HydraService
 	
 	def start
 		FileUtils.rm_rf(@config['data-dir'])
+		sleep 0.5
 		args = get_array_of_args
 		@node_proccess = ChildProcess.build(HYDRA_BIN_PATH, *args)
 		@node_proccess.start
+		sleep 2
 		Timeout.timeout(3) do
 			loop do
 				begin
 					HTTParty.get('http://' + @config['private-api-addr'] + '/apps')
 					break
 				rescue Errno::ECONNREFUSED => try_again
-					sleep 0.3
+					sleep 0.1
 				end
 			end
 		end
@@ -78,6 +80,7 @@ private
 	end
 
 	def compose_peers_arg(base_peer_addr)
+		peers_arg = ''
 		(@node_index-1).times do |i|
 			peers_arg += customize_port(base_peer_addr, i)
 			peers_arg += ',' if i < @node_index-1
