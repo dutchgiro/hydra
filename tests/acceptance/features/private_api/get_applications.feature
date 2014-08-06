@@ -16,25 +16,23 @@ Feature: Getting list of applications
     Then the response should be JSON:
       """
       [{
-          "app1": {
-              "Balancers": [
-                  {
-                      "worker": "MapAndSort",
-                      "mapAttr": "cloud",
-                      "mapSort": ["google", "amazon", "azure"]
-                  },
-                  {
-                      "worker": "SortByNumber",
-                      "sortAttr": "cpuLoad",
-                      "order": 1,
-                      "reverse": true,
-                      "isValid": false,
-                      "decimal": 55.19,
-                      "sortAttr": "cpuLoad",
-                      "worker": "SortByNumber"
-                  }
-              ]
-          }
+        "app1": {
+          "Balancers": [
+              {
+                  "worker": "MapAndSort",
+                  "mapAttr": "cloud",
+                  "mapSort": ["google", "amazon", "azure"]
+              },
+              {
+                  "worker": "SortByNumber",
+                  "sortAttr": "cpuLoad",
+                  "order": 1,
+                  "reverse": true,
+                  "isValid": false,
+                  "decimal": 55.19
+              }
+          ]
+        }
       }]
       """
 

@@ -12,9 +12,7 @@
 	          "order": 1,
 	          "reverse": true,
 	          "isValid": false,
-	          "decimal": 55.19,
-	          "sortAttr": "cpuLoad",
-	          "worker": "SortByNumber"
+	          "decimal": 55.19
 	      }
 	  ]
 	}
