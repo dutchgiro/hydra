@@ -88,7 +88,13 @@ func (a *BasicController) RegisterHandlers(r *mux.Router) {
 }
 
 func (a *BasicController) Delete(rw http.ResponseWriter, req *http.Request) {
-	// TODO
+	vars := mux.Vars(req)
+	id := vars["id"]
+	if err := a.GetConfiguredRepository(vars).Delete(id); err != nil {
+		http.Error(rw, err.Error(), http.StatusNotFound)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
 }
 
 func (a *BasicController) Get(rw http.ResponseWriter, req *http.Request) {
@@ -100,7 +106,6 @@ func (a *BasicController) Get(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
-	// jsonOutput, err := json.Marshal(app)
 	jsonOutput, err := app.ToJson()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
@@ -118,7 +123,6 @@ func (a *BasicController) List(rw http.ResponseWriter, req *http.Request) {
 		http.Error(rw, err.Error(), http.StatusNotFound)
 		return
 	}
-	// jsonOutput, err := json.Marshal(apps)
 	jsonOutput, err := apps.ToJson()
 	if err != nil {
 		http.Error(rw, err.Error(), http.StatusInternalServerError)

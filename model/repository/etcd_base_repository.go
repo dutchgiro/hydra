@@ -50,7 +50,10 @@ func (e *EtcdBaseRepository) makePath(key string) string {
 }
 
 func (e *EtcdBaseRepository) Delete(key string) error {
-	// TODO
+	_, err := e.conn.Delete(e.makePath(key), true, true)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
