@@ -9,6 +9,15 @@ Given(/^one hydra server that is running without an application configuration fi
   start_standalone args
 end
 
+Given(/^one hydra server without applications$/) do
+  @private_api_addr = PRIVATE_API_ADDR
+	args = {
+		'apps-file' => FIXTURES_PATH + 'non-existent-apps-file.json',
+		'private-api-addr' => @private_api_addr
+	}
+  start_standalone args
+end
+
 Given(/^one hydra server that is running with an application configuration file \(apps\.json\) containing an empty array of applications$/) do
   @private_api_addr = PRIVATE_API_ADDR
 	args = {
@@ -27,10 +36,28 @@ Given(/^one hydra server that is running with an application configuration file 
   start_standalone args
 end
 
+Given(/^one hydra server containing an application without instances$/) do
+  @private_api_addr = PRIVATE_API_ADDR
+	args = {
+		'apps-file' => FIXTURES_PATH + 'only_one_app_v1.json',
+		'private-api-addr' => @private_api_addr
+	}
+  start_standalone args
+end
+
 Given(/^one hydra server that is running with an application configuration file \(apps\.json\) containing two applications$/) do
   @private_api_addr = PRIVATE_API_ADDR
 	args = {
 		'apps-file' => FIXTURES_PATH + 'two_apps.json',
+		'private-api-addr' => @private_api_addr
+	}
+  start_standalone args
+end
+
+Given(/^one hydra server containing an application that contains one instance$/) do
+  @private_api_addr = PRIVATE_API_ADDR
+	args = {
+		'apps-file' => FIXTURES_PATH + 'one_app_one_instance.json',
 		'private-api-addr' => @private_api_addr
 	}
   start_standalone args
@@ -42,4 +69,13 @@ Given(/^a hydra server cluster that is running with an application configuration
 		'apps-file' => FIXTURES_PATH + 'only_one_app_v2.json',
 	}
   start_cluster(3, args)
+end
+
+Given(/^one hydra server containing an application that contains two instances$/) do
+  @private_api_addr = PRIVATE_API_ADDR
+	args = {
+		'apps-file' => FIXTURES_PATH + 'one_app_two_instances.json',
+		'private-api-addr' => @private_api_addr
+	}
+  start_standalone args
 end

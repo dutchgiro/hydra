@@ -1,0 +1,37 @@
+[{
+	"app1": {
+		"Balancers": [
+	    	{
+	        	"worker": "MapAndSort",
+	        	"mapAttr": "cloud",
+	        	"mapSort": ["google", "amazon", "azure"]
+	    	},
+	    	{
+	        	"worker": "SortByNumber",
+	        	"sortAttr": "cpuLoad",
+	        	"order": 1,
+	        	"reverse": true,
+	        	"isValid": false,
+	        	"decimal": 55.19
+	    	}
+		],
+		"Instances": {
+	        "pc1001": {
+				"cpuLoad": 99,
+				"mem": 12,
+				"connections": 12000,
+				"state": 0,
+				"cloud": "aws-ireland",
+				"cost": 5
+	        },
+	        "pc1002": {
+				"cpuLoad": 22,
+				"mem": 43,
+				"connections": 400,
+				"state": 1,
+				"cloud": "aws-oregon",
+				"cost": 9
+	        }
+	    }
+	}
+}]
