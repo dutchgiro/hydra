@@ -114,9 +114,25 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 		jsonOutput, _ = json.Marshal(sortedInstanceUris)
 	}
 
-	rw.Header().Set("Access-Control-Allow-Origin", "*")
-	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With")
-	rw.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	// CORS
+	if req.Header.Get("Origin") != "" {
+		rw.Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin"))
+		rw.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if req.Header.Get("Access-Control-Allow-Headers") != "" {
+			rw.Header().Set("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Allow-Headers"))
+		}
+		if req.Header.Get("Access-Control-Allow-Methods") != "" {
+			rw.Header().Set("Access-Control-Allow-Methods", req.Header.Get("Access-Control-Allow-Methods"))
+		}
+
+		if req.Method == "OPTIONS" {
+			rw.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+	// END CORS
+
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(jsonOutput)
