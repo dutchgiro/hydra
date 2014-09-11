@@ -42,10 +42,9 @@ func (b *BalancedInstancesController) sendZMQRequestToBalancer(app []byte, data 
 }
 
 func (b *BalancedInstancesController) RegisterHandlers(r *mux.Router) {
-	// r.HandleFunc(b.basePath, b.List).Methods("GET")
-	r.HandleFunc(b.basePath+"/{id}", b.Get).Methods("GET")
+	r.HandleFunc(b.basePath+"/{id}", b.Get).Methods("GET", "OPTIONS")
 	// retro compatibility alias
-	r.HandleFunc("/app/{id}", b.Get).Methods("GET")
+	r.HandleFunc("/app/{id}", b.Get).Methods("GET", "OPTIONS")
 }
 
 func (b *BalancedInstancesController) getActiveInstances(instances []Instance) []Instance {
@@ -72,8 +71,6 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 		http.Error(rw, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// log.Printf("appEntity: %#v", appEntity)
-	// log.Printf("appEntity.Balancers: %#v", appEntity.Balancers)
 
 	var jsonOutput []byte = []byte("[]")
 	if len(appEntity.Balancers) > 0 {
@@ -94,8 +91,6 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 			}
 
 			response := b.sendZMQRequestToBalancer([]byte(appEntity.Id), [][]byte{balancers, instances})
-			log.Println("++++++++++++++++++ ZMQ RESPONSE ++++++++++++++++++")
-			// log.Printf("%#v", response)
 			// TODO: process response
 
 			if len(response) > 0 {
@@ -119,6 +114,9 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 		jsonOutput, _ = json.Marshal(sortedInstanceUris)
 	}
 
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With")
+	rw.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(jsonOutput)
