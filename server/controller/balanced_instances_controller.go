@@ -63,11 +63,11 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 		rw.Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin"))
 		rw.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		if req.Header.Get("Access-Control-Allow-Headers") != "" {
-			rw.Header().Set("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Allow-Headers"))
+		if req.Header.Get("Access-Control-Request-Headers") != "" {
+			rw.Header().Set("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Request-Headers"))
 		}
-		if req.Header.Get("Access-Control-Allow-Methods") != "" {
-			rw.Header().Set("Access-Control-Allow-Methods", req.Header.Get("Access-Control-Allow-Methods"))
+		if req.Header.Get("Access-Control-Request-Method") != "" {
+			rw.Header().Set("Access-Control-Allow-Methods", req.Header.Get("Access-Control-Request-Method"))
 		}
 
 		if req.Method == "OPTIONS" {
