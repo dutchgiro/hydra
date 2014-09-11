@@ -58,6 +58,25 @@ func (b *BalancedInstancesController) getActiveInstances(instances []Instance) [
 }
 
 func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Request) {
+	// CORS
+	if req.Header.Get("Origin") != "" {
+		rw.Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin"))
+		rw.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if req.Header.Get("Access-Control-Allow-Headers") != "" {
+			rw.Header().Set("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Allow-Headers"))
+		}
+		if req.Header.Get("Access-Control-Allow-Methods") != "" {
+			rw.Header().Set("Access-Control-Allow-Methods", req.Header.Get("Access-Control-Allow-Methods"))
+		}
+
+		if req.Method == "OPTIONS" {
+			rw.WriteHeader(http.StatusOK)
+			return
+		}
+	}
+	// END CORS
+
 	vars := mux.Vars(req)
 	appId := vars["id"]
 	app, err := b.repo.Get(appId)
@@ -113,25 +132,6 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 
 		jsonOutput, _ = json.Marshal(sortedInstanceUris)
 	}
-
-	// CORS
-	if req.Header.Get("Origin") != "" {
-		rw.Header().Set("Access-Control-Allow-Origin", req.Header.Get("Origin"))
-		rw.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if req.Header.Get("Access-Control-Allow-Headers") != "" {
-			rw.Header().Set("Access-Control-Allow-Headers", req.Header.Get("Access-Control-Allow-Headers"))
-		}
-		if req.Header.Get("Access-Control-Allow-Methods") != "" {
-			rw.Header().Set("Access-Control-Allow-Methods", req.Header.Get("Access-Control-Allow-Methods"))
-		}
-
-		if req.Method == "OPTIONS" {
-			rw.WriteHeader(http.StatusOK)
-			return
-		}
-	}
-	// END CORS
 
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "application/json")
