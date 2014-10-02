@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// TODO: change "peer" for "node"
 var _ = Describe("EtcdSupervisor", func() {
 	var (
 		mockCtrl        *gomock.Controller
@@ -29,7 +30,7 @@ var _ = Describe("EtcdSupervisor", func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockEtcdClient = mock.NewMockEtcdClient(mockCtrl)
 		mockEtcdManager = mock.NewMockEtcdManager(mockCtrl)
-		etcdSupervisor = NewEtcdSupervisor(mockEtcdClient)
+		etcdSupervisor = NewEtcdSupervisor(mockEtcdClient, mockEtcdManager)
 	})
 
 	AfterEach(func() {
@@ -38,12 +39,13 @@ var _ = Describe("EtcdSupervisor", func() {
 	})
 
 	Context("when node can not publish the node state", func() {
-		// TODO: check if request remains waiting instead of throw timeout
 		It("should retry publishing", func() {
 			key := ClusterPath + etcdSupervisor.GetPeerAddr() + StateKey
-			ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + 1
+			// TODO: Config delay or constant
+			delay := time.Duration("3s")
+			ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + delay
 			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(key), gomock.Any(), gomock.Eq(ttl),
-				gomock.Any(), gomock.Any()).Times(DefaultWriteAttempts).Return(nil, errors.New("Write operation impossible"))
+				gomock.Any(), gomock.Any()).Return(nil, errors.New("Write operation impossible")).Times(DefaultWriteAttempts)
 
 			go func() {
 				etcdSupervisor.Run()
@@ -53,19 +55,21 @@ var _ = Describe("EtcdSupervisor", func() {
 			It("should restart the node in master prima state", func() {
 				isMaster := false
 				key := ClusterPath + etcdSupervisor.GetPeerAddr() + StateKey
-				ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + 1
+				// TODO: Config delay or constant
+				delay := time.Duration("3s")
+				ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + delay
 				retriesCall := mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(key), gomock.Any(), gomock.Eq(ttl),
-					gomock.Any(), gomock.Any()).Times(DefaultWriteAttempts).Return(nil, errors.New("Write operation impossible"))
+					gomock.Any(), gomock.Any()).Return(nil, errors.New("Write operation impossible")).Times(DefaultWriteAttempts)
 				restartCall := mockEtcdManager.EXPECT().restartEtcdService().Times(1).After(retriesCall)
 				mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(key), gomock.Eq(StateMasterP), gomock.Eq(ttl),
-					gomock.Any(), gomock.Any()).After(restartCall)
+					gomock.Any(), gomock.Any()).Return(&Response{}, nil).After(restartCall)
 				go func() {
 					etcdSupervisor.Run()
 				}()
 
-				tolarableGapDuration := time.Duration("3s")
+				tolarableDelayDuration := time.Duration("3s")
 				duration := (etcdSupervisor.GetMaxAttemptsToSetState() * etcdSupervisor.GetDurationBetweenPublicationsState()) +
-					(etcdSupervisor.GetDurationBetweenPublicationsState() + tolarableGapDuration)
+					(etcdSupervisor.GetDurationBetweenPublicationsState() + tolarableDelayDuration)
 				pollingInterval := etcdSupervisor.GetDurationBetweenPublicationsState()
 				Consistently(func() uint {
 					return etcdSupervisor.GetState()
@@ -74,15 +78,18 @@ var _ = Describe("EtcdSupervisor", func() {
 		})
 	})
 	Context("when node state is master prima", func() {
-		It("should publish its state as master prima", func() {
-			key := ClusterPath + etcdSupervisor.GetPeerAddr() + StateKey
-			ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + 1
-			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(key), gomock.Eq(StateMasterP), gomock.Eq(ttl),
-				gomock.Any(), gomock.Any())
-			go func() {
-				etcdSupervisor.Run()
-			}()
+		It("should have master prima state", func() {
+			Expect(StateMasterP).To(Equal(etcdSupervisor.GetState()))
 		})
+		// It("should publish its state as master prima", func() {
+		// 	key := ClusterPath + etcdSupervisor.GetPeerAddr() + StateKey
+		// 	ttl := etcdSupervisor.GetDurationBetweenPublicationsState() + 1
+		// 	mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(key), gomock.Eq(StateMasterP), gomock.Eq(ttl),
+		// 		gomock.Any(), gomock.Any())
+		// 	go func() {
+		// 		etcdSupervisor.Run()
+		// 	}()
+		// })
 		// It("should wait for a change in requestToJoin key", func() {
 		// 	mockEtcdClient.EXPECT().Watch(gomock.Eq(ClusterRootPath+HydraNodeId+"/"+requestToJoin), gomock.Any(), gomock.Eq(false),
 		// 		gomock.Any(), gomock.Any()).Times(1)
@@ -108,43 +115,85 @@ var _ = Describe("EtcdSupervisor", func() {
 				}()
 			})
 		})
-		Context("when node find a peer to connect", func() {
+		Context("when node find a foreign peer to connect", func() {
 			// It("should check if this peer is leader", func() {
 
 			// })
-			Context("when accesible peer is not leader", func() {
+			Context("when reachable peer is not leader", func() {
+				It("should continue searching a peer to connect", func() {
+					successfulCallToSlaveNode := mockEtcdClient.EXPECT().GetLeader(gomock.Any()).SetArg("http://98.245.153.112:7001").Return("http://98.245.153.111:7001", nil)
+					mockEtcdClient.EXPECT().GetLeader(gomock.Any()).After(successfulCallToSlaveNode)
 
-			})
-			Context("when accesible peer is leader", func() {
-
-			})
-			It("should send request to connect", func() {
-				mockEtcdClient.EXPECT().Set().Times(1)
-
-				go func() {
-					etcdSupervisor.Run()
-				}()
-			})
-			Context("when request to connect is accepted", func() {
-				It("should try to connect", func() {
-
+					go func() {
+						etcdSupervisor.Run()
+					}()
 				})
-				Context("when connect to peer", func() {
-					It("should change its state to slave", func() {
+			})
+			Context("when reachable peer is leader", func() {
+				// Next request for machines and compare with local cluster for overwrite local or remote cluster
+				It("should get registered peers from foreign peer", func() {
+					f1 := mockEtcdClient.EXPECT().GetLeader(gomock.Any()).
+						SetArg("http://98.245.153.111:7001").Return("http://98.245.153.111:7001", nil)
+					f2 := mockEtcdClient.EXPECT().Get(gomock.Any(), gomock.Any()).
+						SetArg("http://98.245.153.111:7001", "/cluster")
+
+					go func() {
+						etcdSupervisor.Run()
+					}()
+				})
+				Context("when the registered peers from foreign peer leader are retrieved", func() {
+					It("should add unknown peers to foreign leader", func() {
 
 					})
 				})
-				Context("when connect to peer is impossible", func() {
-					It("should remain as master prima", func() {
 
+				// TODO: priority = higher cluter size && node priority
+				Context("when it has lower cluster priority than reachable peer", func() {
+					It("should try connecting to reachable peer", func() {
+						successfulCallToSlaveNode := mockEtcdClient.EXPECT().GetLeader(gomock.Any()).SetArg("http://98.245.153.111:7001").Return("http://98.245.153.111:7001", nil)
+						mockEtcdClient.EXPECT().GetLeader(gomock.Any()).AnyTimes().After(successfulCallToSlaveNode)
+						// TODO: restart with attributes
+						mockEtcdManager.EXPECT().RestartEtcdService().Times(1).After(successfulCallToSlaveNode)
+
+						go func() {
+							etcdSupervisor.Run()
+						}()
+					})
+				})
+				Context("when it has higher cluster priority than reachable peer", func() {
+					It("should remain looking for a foreign peer to connect", func() {
+						successfulCallToSlaveNode := mockEtcdClient.EXPECT().GetLeader(gomock.Any()).SetArg("http://98.245.153.111:7001").Return("http://98.245.153.111:7001", nil)
+						mockEtcdClient.EXPECT().GetLeader(gomock.Any()).After(successfulCallToSlaveNode)
 					})
 				})
 			})
-			Context("when request to connect is not accepted", func() {
-				It("should try to connect", func() {
+			// It("should send request to connect", func() {
+			// 	mockEtcdClient.EXPECT().Set().Times(1)
 
-				})
-			})
+			// 	go func() {
+			// 		etcdSupervisor.Run()
+			// 	}()
+			// })
+			// Context("when request to connect is accepted", func() {
+			// 	It("should try to connect", func() {
+
+			// 	})
+			// 	Context("when connect to peer", func() {
+			// 		It("should change its state to slave", func() {
+
+			// 		})
+			// 	})
+			// 	Context("when connect to peer is impossible", func() {
+			// 		It("should remain as master prima", func() {
+
+			// 		})
+			// 	})
+			// })
+			// Context("when request to connect is not accepted", func() {
+			// 	It("should try to connect", func() {
+
+			// 	})
+			// })
 		})
 		Context("when node gets a request to connect", func() {
 			It("should wait for connection", func() {
