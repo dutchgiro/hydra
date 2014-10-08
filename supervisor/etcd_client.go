@@ -153,9 +153,19 @@ func (e *EtcdClient) WithMachineAddr(machineAddr string) *EtcdClient {
 	return e
 }
 
+// Compare And Swap
+
+type KeyExistence int
+
+const (
+	False = iota
+	True
+	Unknow
+)
+
 func (e *EtcdClient) CompareAndSwap(key string, value string, ttl uint64,
-	prevValue string, prevIndex uint64) (*Response, error) {
-	raw, err := e.RawCompareAndSwap(key, value, ttl, prevValue, prevIndex)
+	prevValue string, prevIndex uint64, prevExist KeyExistence) (*Response, error) {
+	raw, err := e.RawCompareAndSwap(key, value, ttl, prevValue, prevIndex, prevExist)
 	if err != nil {
 		return nil, err
 	}
@@ -164,8 +174,8 @@ func (e *EtcdClient) CompareAndSwap(key string, value string, ttl uint64,
 }
 
 func (e *EtcdClient) RawCompareAndSwap(key string, value string, ttl uint64,
-	prevValue string, prevIndex uint64) (*RawResponse, error) {
-	if prevValue == "" && prevIndex == 0 {
+	prevValue string, prevIndex uint64, prevExist KeyExistence) (*RawResponse, error) {
+	if prevValue == "" && prevIndex == 0 && prevExist == Unknow {
 		return nil, fmt.Errorf("You must give either prevValue or prevIndex.")
 	}
 
@@ -175,6 +185,15 @@ func (e *EtcdClient) RawCompareAndSwap(key string, value string, ttl uint64,
 	}
 	if prevIndex != 0 {
 		options["prevIndex"] = prevIndex
+	}
+	if prevExist != Unknow {
+		var exist bool
+		if prevExist == False {
+			exist = false
+		} else if prevExist == True {
+			exist = true
+		}
+		options["prevExist"] = exist
 	}
 
 	raw, err := e.put(key, value, ttl, options)

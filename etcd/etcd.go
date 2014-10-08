@@ -18,6 +18,7 @@ import (
 type Etcd struct {
 	Config             *config.Config
 	EtcdServer         *server.Server
+	EtcdServerListener net.Listener
 	PeerServer         *server.PeerServer
 	PeerServerListener net.Listener
 	Registry           *server.Registry
@@ -135,30 +136,40 @@ func (e *Etcd) Load() {
 	e.EtcdServer = s
 	e.PeerServer = ps
 	e.PeerServerListener = psListener
+	e.EtcdServerListener = e.configEtcdListener()
 	e.Registry = registry
 }
 
-func (e *Etcd) Start(withEtcdServer bool) {
+func (e *Etcd) Start() {
 	e.PeerServer.Start(e.Config.Snapshot, e.Config.Peers)
 
-	if withEtcdServer {
-		sListener := e.configEtcdListener()
-		go func() {
-			log.Infof("etcd server [name %s, listen on %s, advertised url %s]", e.EtcdServer.Name, sListener.Addr(), e.EtcdServer.URL())
-			corsInfo, err := ehttp.NewCORSInfo(e.Config.CorsOrigins)
-			if err != nil {
-				log.Fatal("CORS:", err)
-			}
-			sHTTP := &ehttp.CORSHandler{e.EtcdServer.HTTPHandler(), corsInfo}
-			log.Fatal(http.Serve(sListener, sHTTP))
-		}()
-	}
+	go func() {
+		log.Infof("etcd server [name %s, listen on %s, advertised url %s]", e.EtcdServer.Name, e.EtcdServerListener.Addr(), e.EtcdServer.URL())
+		corsInfo, err := ehttp.NewCORSInfo(e.Config.CorsOrigins)
+		if err != nil {
+			log.Fatal("CORS:", err)
+		}
+		sHTTP := &ehttp.CORSHandler{e.EtcdServer.HTTPHandler(), corsInfo}
+		log.Fatal(http.Serve(e.EtcdServerListener, sHTTP))
+	}()
+
 	log.Infof("peer server [name %s, listen on %s, advertised url %s]", e.PeerServer.Config.Name, e.PeerServerListener.Addr(), e.PeerServer.Config.URL)
-	// Retrieve CORS configuration
 	corsInfo, err := ehttp.NewCORSInfo(e.Config.CorsOrigins)
 	if err != nil {
 		log.Fatal("CORS:", err)
 	}
 	sHTTP := &ehttp.CORSHandler{e.PeerServer.HTTPHandler(), corsInfo}
 	log.Fatal(http.Serve(e.PeerServerListener, sHTTP))
+}
+
+func (e *Etcd) Stop() {
+	var err error
+	err = e.EtcdServerListener.Close()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	err = e.PeerServerListener.Close()
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }

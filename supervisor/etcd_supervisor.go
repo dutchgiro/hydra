@@ -13,14 +13,14 @@ type Supervisor interface {
 
 const (
 	ClusterRootPath              string = "cluster"
-	DefaultMaxAttemptsToSetState uint   = 2
+	DefaultMaxAttemptsToSetState uint   = 3
 	StateAvailable               string = "available"
 	StateKey                     string = "state"
 )
 
 type EtcdSupervisor struct {
-	// EtcdClient *EtcdClient
-	EtcdClient EtcdRequester
+	EtcdClient  EtcdRequester
+	EtcdManager EtcdController
 
 	durationBetweenPublicationsState time.Duration
 	modifiedIndexKeyState            uint64
@@ -28,6 +28,7 @@ type EtcdSupervisor struct {
 	peerAddr                         string
 	state                            uint
 	stateTTL                         uint64
+	executionChannel                 chan int
 
 	// etcdRequester                    *EtcdRequester
 	// maxAttemptsToSetState            uint
@@ -43,11 +44,25 @@ type EtcdSupervisor struct {
 // 	}
 // }
 
-// func NewEtcdSupervisor(config *hydra_config.Config) *EtcdSupervisor {
+func NewEtcdSupervisor(config *hydra_config.Config) *EtcdSupervisor {
+	millisecondsBetweenPublicationsState := uint(config.Peer.HeartbeatTimeout * 2)
+
+	return &EtcdSupervisor{
+		EtcdClient:                       NewEtcdClient([]string{config.EtcdAddr}),
+		durationBetweenPublicationsState: time.Duration(millisecondsBetweenPublicationsState) * time.Millisecond,
+		executionChannel:                 make(chan int),
+		modifiedIndexKeyState:            0,
+		numOfSetStateRetries:             DefaultMaxAttemptsToSetState,
+		peerAddr:                         config.Peer.Addr,
+		stateTTL:                         uint64(millisecondsBetweenPublicationsState * (DefaultMaxAttemptsToSetState + 1)),
+	}
+}
+
+// func NewEtcdSupervisor(config *hydra_config.Config, etcdClient EtcdRequester) *EtcdSupervisor {
 // 	millisecondsBetweenPublicationsState := uint(config.Peer.HeartbeatTimeout * 2)
 
 // 	return &EtcdSupervisor{
-// 		EtcdClient:                       NewEtcdClient([]string{config.EtcdAddr}),
+// 		EtcdClient:                       etcdClient,
 // 		durationBetweenPublicationsState: time.Duration(millisecondsBetweenPublicationsState) * time.Millisecond,
 // 		modifiedIndexKeyState:            0,
 // 		numOfSetStateRetries:             DefaultMaxAttemptsToSetState,
@@ -56,57 +71,88 @@ type EtcdSupervisor struct {
 // 	}
 // }
 
-func NewEtcdSupervisor(config *hydra_config.Config, etcdClient EtcdRequester) *EtcdSupervisor {
-	millisecondsBetweenPublicationsState := uint(config.Peer.HeartbeatTimeout * 2)
-
-	return &EtcdSupervisor{
-		EtcdClient:                       etcdClient,
-		durationBetweenPublicationsState: time.Duration(millisecondsBetweenPublicationsState) * time.Millisecond,
-		modifiedIndexKeyState:            0,
-		numOfSetStateRetries:             DefaultMaxAttemptsToSetState,
-		peerAddr:                         config.Peer.Addr,
-		stateTTL:                         uint64(millisecondsBetweenPublicationsState * (DefaultMaxAttemptsToSetState + 1)),
+func (e *EtcdSupervisor) Run() {
+	fmt.Println("RUN")
+OuterLoop:
+	for {
+		fmt.Println("------->>> FOR")
+		select {
+		case <-e.executionChannel:
+			fmt.Println("------->>> BREAK LOOP")
+			break OuterLoop
+		default:
+			fmt.Println("------->>> Call to setNodeState")
+			err := e.setNodeState()
+			if err != nil {
+				fmt.Println("------->>> Call to Restart")
+				e.EtcdManager.Restart()
+				fmt.Println("------->>> Break")
+				// break OuterLoop
+			}
+			time.Sleep(e.durationBetweenPublicationsState)
+		}
 	}
+
+	fmt.Println("EXIT RUN")
 }
 
-func (e *EtcdSupervisor) Run() {
-	_ = e.setNodeState()
+func (e *EtcdSupervisor) Stop() {
+	e.executionChannel <- 0
 }
 
 func (e *EtcdSupervisor) setNodeState() error {
-	fmt.Println("-------> setNodeState")
 	var res *Response
 	var err error = nil
 	stateKey := ClusterRootPath + "/" + e.peerAddr + "/" + StateKey
-	// fmt.Println(stateKey)
-	// fmt.Println(StateAvailable)
-	// fmt.Printf("%d\n", e.stateTTL)
 
+	var stateKeyExistence KeyExistence = False
 	if e.modifiedIndexKeyState > 0 {
-		for i := 0; i < int(e.numOfSetStateRetries); i++ {
-			res, err = e.EtcdClient.CompareAndSwap(stateKey, StateAvailable, e.stateTTL, "", e.modifiedIndexKeyState)
-			if err == nil {
-				e.modifiedIndexKeyState = res.Node.ModifiedIndex
-				break
-			}
-		}
-	} else {
-		fmt.Printf("-------> First: %d\n", e.numOfSetStateRetries)
-
-		for i := 0; i < int(e.numOfSetStateRetries); i++ {
-			fmt.Println("-------> Set")
-			fmt.Println(stateKey)
-			fmt.Println(StateAvailable)
-			fmt.Printf("%d\n", e.stateTTL)
-			res, err = e.EtcdClient.Set(stateKey, StateAvailable, e.stateTTL)
-			fmt.Printf("%#v", res)
-			fmt.Printf("%#v\n", err)
-			if res != nil {
-				// e.modifiedIndexKeyState = res.Node.ModifiedIndex
-				// break
-			}
-		}
+		stateKeyExistence = Unknow
 	}
+
+	for i := 0; i < int(e.numOfSetStateRetries); i++ {
+		res, err = e.EtcdClient.CompareAndSwap(stateKey, StateAvailable, e.stateTTL,
+			"", e.modifiedIndexKeyState, stateKeyExistence)
+		if err == nil && res != nil {
+			e.modifiedIndexKeyState = res.Node.ModifiedIndex
+			break
+		}
+		time.Sleep(e.durationBetweenPublicationsState)
+	}
+
+	// if e.modifiedIndexKeyState > 0 {
+	// 	fmt.Println("------->>> CompareAndSwap")
+	// 	fmt.Printf("%d\n", e.numOfSetStateRetries)
+	// 	for i := 0; i < int(e.numOfSetStateRetries); i++ {
+	// 		fmt.Println(stateKey)
+	// 		fmt.Println(StateAvailable)
+	// 		fmt.Printf("%d\n", e.stateTTL)
+	// 		fmt.Printf("%d\n", e.modifiedIndexKeyState)
+	// 		res, err = e.EtcdClient.CompareAndSwap(stateKey, StateAvailable, e.stateTTL, "", e.modifiedIndexKeyState)
+	// 		if err == nil && res != nil {
+	// 			e.modifiedIndexKeyState = res.Node.ModifiedIndex
+	// 			break
+	// 		}
+	// 		time.Sleep(e.durationBetweenPublicationsState)
+	// 	}
+	// } else {
+	// 	fmt.Println("------->>> Set")
+	// 	fmt.Printf("%d\n", e.numOfSetStateRetries)
+	// 	for i := 0; i < int(e.numOfSetStateRetries); i++ {
+	// 		fmt.Println(stateKey)
+	// 		fmt.Println(StateAvailable)
+	// 		fmt.Printf("%d\n", e.stateTTL)
+	// 		res, err = e.EtcdClient.Set(stateKey, StateAvailable, e.stateTTL)
+	// 		// fmt.Printf("%#v\n", res)
+	// 		// fmt.Printf("%#v\n", err)
+	// 		if err == nil && res != nil {
+	// 			// fmt.Printf("%d\n", res.Node.ModifiedIndex)
+	// 			e.modifiedIndexKeyState = res.Node.ModifiedIndex
+	// 			break
+	// 		}
+	// 		time.Sleep(e.durationBetweenPublicationsState)
+	// 	}
+	// }
 
 	return err
 }
