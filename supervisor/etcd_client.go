@@ -12,9 +12,12 @@ import (
 )
 
 type EtcdRequester interface {
+	BaseGet(key string) (*RawResponse, error)
 	CompareAndSwap(key string, value string, ttl uint64,
-		prevValue string, prevIndex uint64) (*Response, error)
-	Set(key string, value string, ttl uint64) (*Response, error)
+		prevValue string, prevIndex uint64, prevExist KeyExistence) (*Response, error)
+	Get(key string, sort, recursive bool) (*Response, error)
+	WithMachineAddr(machineAddr string) EtcdRequester
+	// Set(key string, value string, ttl uint64) (*Response, error)
 }
 
 // See SetConsistency for how to use these constants.
@@ -147,7 +150,7 @@ func (e *EtcdClient) saveConfig() error {
 	return nil
 }
 
-func (e *EtcdClient) WithMachineAddr(machineAddr string) *EtcdClient {
+func (e *EtcdClient) WithMachineAddr(machineAddr string) EtcdRequester {
 	e.machineAddr = machineAddr
 
 	return e
@@ -158,7 +161,7 @@ func (e *EtcdClient) WithMachineAddr(machineAddr string) *EtcdClient {
 type KeyExistence int
 
 const (
-	False = iota
+	False KeyExistence = iota
 	True
 	Unknow
 )
@@ -203,4 +206,54 @@ func (e *EtcdClient) RawCompareAndSwap(key string, value string, ttl uint64,
 	}
 
 	return raw, err
+}
+
+func (e *EtcdClient) BaseGet(key string) (*RawResponse, error) {
+	raw, err := e.RawBaseGet(key)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return raw, nil
+}
+
+func (e *EtcdClient) RawBaseGet(key string) (*RawResponse, error) {
+	ops := Options{}
+
+	return e.rawGet(key, ops)
+}
+
+// getCancelable issues a cancelable GET request
+func (e *EtcdClient) rawGetCancelable(key string, options Options,
+	cancel <-chan bool) (*RawResponse, error) {
+	// TODO: uncomment
+	// logger.Debugf("get %s [%s]", key, e.machineAddr)
+	p := key
+
+	// If consistency level is set to STRONG, append
+	// the `consistent` query string.
+	if e.config.Consistency == STRONG_CONSISTENCY {
+		options["consistent"] = true
+	}
+
+	str, err := options.toParameters(VALID_GET_OPTIONS)
+	if err != nil {
+		return nil, err
+	}
+	p += str
+
+	req := NewRawRequest("GET", p, nil, cancel)
+	resp, err := e.SendRequest(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// get issues a GET request
+func (e *EtcdClient) rawGet(key string, options Options) (*RawResponse, error) {
+	return e.rawGetCancelable(key, options, nil)
 }
