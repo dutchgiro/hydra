@@ -11,8 +11,9 @@ type Peer struct {
 }
 
 type IterableCluster interface {
-	Next() bool
-	Value() Peer
+	HasNext() bool
+	Next() (Peer, error)
+	SetPeers(peers []Peer)
 }
 
 type PeerCluster struct {
@@ -22,8 +23,8 @@ type PeerCluster struct {
 
 func NewPeerCluster(peers []Peer) *PeerCluster {
 	return &PeerCluster{
-		peers:   peers,
 		current: -1,
+		peers:   peers,
 	}
 }
 
@@ -40,4 +41,8 @@ func (p *PeerCluster) Next() (Peer, error) {
 		return Peer{}, errors.New("No such element")
 	}
 	return p.peers[p.current], nil
+}
+
+func (p *PeerCluster) SetPeers(peers []Peer) {
+	p.peers = peers
 }
