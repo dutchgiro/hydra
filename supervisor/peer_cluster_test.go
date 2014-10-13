@@ -18,20 +18,16 @@ var _ = FDescribe("PeerCluster", func() {
 			Peer{
 				Addr:     "98.245.153.111:4001",
 				PeerAddr: "98.245.153.111:7001",
-				State:    PeerStateEnabled,
+				State:    "",
 			},
 			Peer{
 				Addr:     "98.245.153.112:4001",
 				PeerAddr: "98.245.153.112:7001",
-				State:    PeerStateEnabled,
+				State:    "",
 			},
 		}
 		peerCluster = NewPeerCluster(initPeers)
 	})
-
-	// AfterEach(func() {
-	// 	mockCtrl.Finish()
-	// })
 
 	Describe("Next", func() {
 		It("should return the next value until end the collection", func() {
@@ -50,31 +46,10 @@ var _ = FDescribe("PeerCluster", func() {
 		It("should return true until all peers have been requested", func() {
 			for i := 0; i < len(initPeers); i++ {
 				Expect(peerCluster.HasNext()).To(BeTrue())
+				_, err := peerCluster.Next()
+				Expect(err).ToNot(HaveOccurred())
 			}
 			Expect(peerCluster.HasNext()).To(BeFalse())
 		})
 	})
-
-	// Describe("Merge", func() {
-
-	// })
-	// Describe("Next", func() {
-	// 	It("should return true as many times as peers have", func() {
-	// 		for i := 0; i < len(initPeers); i++ {
-	// 			Expect(peerCluster.Next()).To(BeTrue())
-	// 		}
-	// 		Expect(peerCluster.Next()).To(BeFalse())
-	// 	})
-	// })
-	// Describe("Reset", func() {
-
-	// })
-	// Describe("Value", func() {
-	// 	It("should return the current value", func() {
-	// 		for i := 0; i < len(initPeers); i++ {
-	// 			peerCluster.Next()
-	// 			Expect(peerCluster.Value()).To(Equal(initPeers[i]))
-	// 		}
-	// 	})
-	// })
 })
