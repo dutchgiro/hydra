@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var _ = FDescribe("PeersMonitor", func() {
+var _ = Describe("PeersMonitor", func() {
 	const (
 		peerAddrItself                   string        = "127.0.0.1:7701"
 		stateKeyTTL                      uint64        = 5

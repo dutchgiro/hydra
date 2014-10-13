@@ -1,57 +1,69 @@
 package supervisor_test
 
-// import (
-// 	. "github.com/innotech/hydra/supervisor"
-// 	mock "github.com/innotech/hydra/supervisor/mock"
+import (
+	. "github.com/innotech/hydra/supervisor"
+	mock "github.com/innotech/hydra/supervisor/mock"
 
-// 	"github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
-// 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
-// 	// . "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
+	"github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
+	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
+	// . "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
-// 	// "errors"
-// 	"net/http"
-// 	"time"
-// )
+	// "errors"
+	// "net/http"
+	"time"
+)
 
-// var _ = Describe("ClusterInspector", func() {
-// 	const (
-// 		peerAddrItself string = "127.0.0.1:7701"
-// 	)
+var _ = Describe("ClusterInspector", func() {
+	const (
+		etcdAddrItself string = "127.0.0.1:7401"
+		peerAddrItself string = "127.0.0.1:7701"
+	)
 
-// 	var (
-// 		// ch             chan StateControllerState
-// 		mockCtrl         *gomock.Controller
-// 		mockEtcdClient   *mock.MockEtcdRequester
-// 		clusterInspector *ClusterInspector
-// 	)
+	var (
+		// ch               chan PeerCluster
+		mockCtrl         *gomock.Controller
+		mockPeersMonitor *mock.MockFolderMonitor
+		clusterInspector *ClusterInspector
+	)
 
-// 	BeforeEach(func() {
-// 		mockCtrl = gomock.NewController(GinkgoT())
-// 		mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
-// 		clusterInspector = NewClusterInspector(mockEtcdClient)
-// 		// ch = make(chan StateControllerState)
-// 	})
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+		mockPeersMonitor = mock.NewMockFolderMonitor(mockCtrl)
+		clusterInspector = NewClusterInspector(etcdAddrItself, peerAddrItself, []string{})
+		clusterInspector.PeersMonitor = mockPeersMonitor
+		// ch = make(chan StateControllerState)
+	})
 
-// 	AfterEach(func() {
-// 		mockCtrl.Finish()
-// 	})
+	AfterEach(func() {
+		mockCtrl.Finish()
+	})
 
-// 	successGetLeaderResponse := &RawResponse{
-// 		StatusCode: http.StatusOK,
-// 		Body:       []byte("http://" + peerAddrItself),
-// 		Header:     nil,
-// 	}
+	// successGetLeaderResponse := &RawResponse{
+	// 	StatusCode: http.StatusOK,
+	// 	Body:       []byte("http://" + peerAddrItself),
+	// 	Header:     nil,
+	// }
 
-// 	Describe("Run", func() {
-// 		It("should search for a peer to connect", func() {
-// 			c1 := mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).Times(1)
-// 			mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).AnyTimes().After(c1)
+	Describe("Run", func() {
+		It("should run a Peers Monitor", func() {
+			mockPeersMonitor.EXPECT().Run(gomock.Any()).Times(1)
 
-// 			go func() {
-// 				clusterInspector.Run()
-// 			}()
-// 			time.Sleep(time.Duration(3) * time.Second)
-// 		})
+			go func() {
+				clusterInspector.Run()
+			}()
+			time.Sleep(time.Duration(1) * time.Second)
+		})
+		// It("should search for a peer to connect", func() {
+		// 	c1 := mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).Times(1)
+		// 	mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).AnyTimes().After(c1)
+
+		// 	go func() {
+		// 		clusterInspector.Run()
+		// 	}()
+		// 	time.Sleep(time.Duration(3) * time.Second)
+		// })
+	})
+})
 
 // **************************************************************************************************************
 

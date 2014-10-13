@@ -5,12 +5,14 @@ type ClusterAnalyzer interface {
 }
 
 const (
+	// TODO: unify etcd constants
 	LeaderKey string = "leader"
 )
 
 type ClusterInspector struct {
 	etcdClient   EtcdRequester
-	peers        []string
+	configPeers  []string
+	peers        PeerCluster
 	PeersMonitor FolderMonitor
 }
 
@@ -18,23 +20,34 @@ type ClusterInspector struct {
 func NewClusterInspector(selfAddr, selfPeerAddr string, knownPeers []string) *ClusterInspector {
 	return &ClusterInspector{
 		etcdClient:   NewEtcdClient([]string{selfAddr}),
-		peers:        []string{},
+		configPeers:  []string{},
 		PeersMonitor: NewPeersMonitor(NewEtcdClient([]string{selfAddr}).WithMachineAddr(selfAddr)),
 	}
 }
 
 func (c *ClusterInspector) Run() {
+	// var peerCluster []Peer
+	peersMonitorChannel := make(chan []Peer)
+	go c.PeersMonitor.Run(peersMonitorChannel)
 	// OuterLoop:
-	// for {
-	// 	select {
-	// 	case <-e.executionChannel:
-	// 		fmt.Println("------->>> BREAK LOOP")
-	// 		break OuterLoop
-	// 	default:
-	// 		leader := c.searchForLeader()
-	// 		time.Sleep(e.durationBetweenPublicationsState)
-	// 	}
-	// }
+	for {
+		select {
+		// case <-e.executionChannel:
+		// 	fmt.Println("------->>> BREAK LOOP")
+		// 	break OuterLoop
+		// case peerCluster = <-peersMonitorChannel:
+		case _ = <-peersMonitorChannel:
+
+			break
+			// default:
+			// 	leader := c.searchForLeader()
+			// 	time.Sleep(e.durationBetweenPublicationsState)
+		}
+	}
+}
+
+func (c *ClusterInspector) mergeCluster() {
+
 }
 
 func (c *ClusterInspector) searchForLeader() {
