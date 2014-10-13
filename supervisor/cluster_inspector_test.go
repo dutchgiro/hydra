@@ -9,11 +9,11 @@ import (
 	// . "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
 	// "errors"
-	// "net/http"
+	"net/http"
 	"time"
 )
 
-var _ = Describe("ClusterInspector", func() {
+var _ = FDescribe("ClusterInspector", func() {
 	const (
 		etcdAddrItself string = "127.0.0.1:7401"
 		peerAddrItself string = "127.0.0.1:7701"
@@ -22,14 +22,17 @@ var _ = Describe("ClusterInspector", func() {
 	var (
 		// ch               chan PeerCluster
 		mockCtrl         *gomock.Controller
+		mockEtcdClient   *mock.MockEtcdRequester
 		mockPeersMonitor *mock.MockFolderMonitor
 		clusterInspector *ClusterInspector
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
+		mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
 		mockPeersMonitor = mock.NewMockFolderMonitor(mockCtrl)
 		clusterInspector = NewClusterInspector(etcdAddrItself, peerAddrItself, []string{})
+		clusterInspector.EtcdClient = mockEtcdClient
 		clusterInspector.PeersMonitor = mockPeersMonitor
 		// ch = make(chan StateControllerState)
 	})
@@ -38,11 +41,11 @@ var _ = Describe("ClusterInspector", func() {
 		mockCtrl.Finish()
 	})
 
-	// successGetLeaderResponse := &RawResponse{
-	// 	StatusCode: http.StatusOK,
-	// 	Body:       []byte("http://" + peerAddrItself),
-	// 	Header:     nil,
-	// }
+	successGetLeaderResponse := &RawResponse{
+		StatusCode: http.StatusOK,
+		Body:       []byte("http://" + peerAddrItself),
+		Header:     nil,
+	}
 
 	Describe("Run", func() {
 		It("should run a Peers Monitor", func() {
@@ -53,15 +56,16 @@ var _ = Describe("ClusterInspector", func() {
 			}()
 			time.Sleep(time.Duration(1) * time.Second)
 		})
-		// It("should search for a peer to connect", func() {
-		// 	c1 := mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).Times(1)
-		// 	mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).AnyTimes().After(c1)
+		It("should search for a peer to connect", func() {
+			mockPeersMonitor.EXPECT().Run(gomock.Any()).AnyTimes()
+			c1 := mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).Times(1)
+			mockEtcdClient.EXPECT().BaseGet(gomock.Eq(LeaderKey)).Return(successGetLeaderResponse, nil).AnyTimes().After(c1)
 
-		// 	go func() {
-		// 		clusterInspector.Run()
-		// 	}()
-		// 	time.Sleep(time.Duration(3) * time.Second)
-		// })
+			go func() {
+				clusterInspector.Run()
+			}()
+			time.Sleep(time.Duration(3) * time.Second)
+		})
 	})
 })
 
