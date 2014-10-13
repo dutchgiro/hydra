@@ -6,13 +6,13 @@ import (
 
 	"github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
-	// . "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
+	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
 	// "errors"
 	"time"
 )
 
-var _ = Describe("PeersMonitor", func() {
+var _ = FDescribe("PeersMonitor", func() {
 	const (
 		peerAddrItself                   string        = "127.0.0.1:7701"
 		stateKeyTTL                      uint64        = 5
@@ -20,7 +20,7 @@ var _ = Describe("PeersMonitor", func() {
 	)
 
 	var (
-		// ch             chan StateControllerState
+		ch             chan PeerCluster
 		mockCtrl       *gomock.Controller
 		mockEtcdClient *mock.MockEtcdRequester
 		peersMonitor   *PeersMonitor
@@ -30,25 +30,146 @@ var _ = Describe("PeersMonitor", func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
 		peersMonitor = NewPeersMonitor(mockEtcdClient)
-		// ch = make(chan StateControllerState)
+		ch = make(chan PeerCluster)
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
 
+	expectedCluster := PeerCluster{
+		Peer{
+			Id:    "98.245.153.111:7001",
+			State: PeerStateEnabled,
+		},
+		Peer{
+			Id:    "98.245.153.112:7001",
+			State: PeerStateEnabled,
+		},
+	}
+	var modifiedIndex uint64 = 3
+	successResponse := &Response{
+		Action: "",
+		Node: &Node{
+			Key:        ClusterKey,
+			Value:      "",
+			Dir:        true,
+			Expiration: nil,
+			TTL:        3,
+			Nodes: []*Node{
+				&Node{
+					Key:        expectedCluster[0].Id,
+					Value:      "",
+					Dir:        true,
+					Expiration: nil,
+					TTL:        3,
+					Nodes: []*Node{
+						&Node{
+							Key:           StateKey,
+							Value:         expectedCluster[0].State,
+							Dir:           false,
+							Expiration:    nil,
+							TTL:           3,
+							Nodes:         nil,
+							ModifiedIndex: modifiedIndex,
+							CreatedIndex:  modifiedIndex - 1,
+						},
+					},
+					ModifiedIndex: modifiedIndex,
+					CreatedIndex:  modifiedIndex - 1,
+				},
+				&Node{
+					Key:        expectedCluster[1].Id,
+					Value:      "",
+					Dir:        true,
+					Expiration: nil,
+					TTL:        3,
+					Nodes: []*Node{
+						&Node{
+							Key:           StateKey,
+							Value:         expectedCluster[1].State,
+							Dir:           false,
+							Expiration:    nil,
+							TTL:           3,
+							Nodes:         nil,
+							ModifiedIndex: modifiedIndex,
+							CreatedIndex:  modifiedIndex - 1,
+						},
+					},
+					ModifiedIndex: modifiedIndex,
+					CreatedIndex:  modifiedIndex - 1,
+				},
+			},
+			ModifiedIndex: modifiedIndex,
+			CreatedIndex:  modifiedIndex - 1,
+		},
+		PrevNode:  nil,
+		EtcdIndex: 0,
+		RaftIndex: 0,
+		RaftTerm:  0,
+	}
+	var requestClusterInterval float64 = DefaultRequestClusterInterval.Seconds()
+
 	Describe("Run", func() {
 		It("should request the cluster directory periodically", func() {
 			c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+				Return(successResponse, nil).
 				Times(1)
 			mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+				Return(successResponse, nil).
 				AnyTimes().After(c1)
 
 			go func() {
-				// stateManager.Run(ch)
-				peersMonitor.Run()
+				peersMonitor.Run(ch)
 			}()
-			time.Sleep(DefaultRequestClusterInterval + time.Duration(1)*time.Second)
+			time.Sleep(DefaultRequestClusterInterval - time.Duration(1)*time.Second)
+		})
+		// Context("when the cluster has not been requested previously", func() {
+		// 	It("should save the cluster without emit it as a change", func() {
+		// 		c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+		// 			Return(successResponse, nil).
+		// 			Times(1)
+		// 		mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+		// 			Return(successResponse, nil).
+		// 			AnyTimes().After(c1)
+
+		// 		go func() {
+		// 			peersMonitor.Run(ch)
+		// 		}()
+		// 		Consistently(ch, requestClusterInterval/2, requestClusterInterval/4).ShouldNot(Receive())
+		// 		Expect(peersMonitor.Cluster).To(Equal(expectedCluster))
+		// 	})
+		// })
+		Context("when no change is detected in the cluster", func() {
+			It("should not emit any cluster", func() {
+				peersMonitor.Cluster = expectedCluster
+				c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+					Return(successResponse, nil).
+					Times(1)
+				mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+					Return(successResponse, nil).
+					AnyTimes().After(c1)
+
+				go func() {
+					peersMonitor.Run(ch)
+				}()
+				Consistently(ch, requestClusterInterval*2.2, requestClusterInterval).ShouldNot(Receive())
+			})
+		})
+		Context("when a change is detected in the cluster", func() {
+			It("should emit the new cluster", func() {
+				peersMonitor.Cluster = expectedCluster[:1]
+				mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+					Return(successResponse, nil).
+					Times(1)
+
+				go func() {
+					peersMonitor.Run(ch)
+				}()
+				Eventually(ch, requestClusterInterval-1.0,
+					requestClusterInterval/3).Should(Receive())
+				Expect(peersMonitor.Cluster).To(Equal(expectedCluster))
+			})
 		})
 	})
 })
