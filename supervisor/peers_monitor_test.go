@@ -20,7 +20,7 @@ var _ = FDescribe("PeersMonitor", func() {
 	)
 
 	var (
-		ch             chan PeerCluster
+		ch             chan []Peer
 		mockCtrl       *gomock.Controller
 		mockEtcdClient *mock.MockEtcdRequester
 		peersMonitor   *PeersMonitor
@@ -30,21 +30,23 @@ var _ = FDescribe("PeersMonitor", func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
 		peersMonitor = NewPeersMonitor(mockEtcdClient)
-		ch = make(chan PeerCluster)
+		ch = make(chan []Peer)
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
 
-	expectedCluster := PeerCluster{
+	expectedCluster := []Peer{
 		Peer{
-			Id:    "98.245.153.111:7001",
-			State: PeerStateEnabled,
+			Addr:     "98.245.153.111:4001",
+			PeerAddr: "98.245.153.111:7001",
+			State:    PeerStateEnabled,
 		},
 		Peer{
-			Id:    "98.245.153.112:7001",
-			State: PeerStateEnabled,
+			Addr:     "98.245.153.112:4001",
+			PeerAddr: "98.245.153.112:7001",
+			State:    PeerStateEnabled,
 		},
 	}
 	var modifiedIndex uint64 = 3
@@ -58,12 +60,22 @@ var _ = FDescribe("PeersMonitor", func() {
 			TTL:        3,
 			Nodes: []*Node{
 				&Node{
-					Key:        expectedCluster[0].Id,
+					Key:        expectedCluster[0].PeerAddr,
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
+						&Node{
+							Key:           AddrKey,
+							Value:         expectedCluster[0].Addr,
+							Dir:           false,
+							Expiration:    nil,
+							TTL:           3,
+							Nodes:         nil,
+							ModifiedIndex: modifiedIndex,
+							CreatedIndex:  modifiedIndex - 1,
+						},
 						&Node{
 							Key:           StateKey,
 							Value:         expectedCluster[0].State,
@@ -79,12 +91,22 @@ var _ = FDescribe("PeersMonitor", func() {
 					CreatedIndex:  modifiedIndex - 1,
 				},
 				&Node{
-					Key:        expectedCluster[1].Id,
+					Key:        expectedCluster[1].PeerAddr,
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
+						&Node{
+							Key:           AddrKey,
+							Value:         expectedCluster[1].Addr,
+							Dir:           false,
+							Expiration:    nil,
+							TTL:           3,
+							Nodes:         nil,
+							ModifiedIndex: modifiedIndex,
+							CreatedIndex:  modifiedIndex - 1,
+						},
 						&Node{
 							Key:           StateKey,
 							Value:         expectedCluster[1].State,
@@ -142,7 +164,7 @@ var _ = FDescribe("PeersMonitor", func() {
 		// })
 		Context("when no change is detected in the cluster", func() {
 			It("should not emit any cluster", func() {
-				peersMonitor.Cluster = expectedCluster
+				peersMonitor.Peers = expectedCluster
 				c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
 					Return(successResponse, nil).
 					Times(1)
@@ -158,7 +180,7 @@ var _ = FDescribe("PeersMonitor", func() {
 		})
 		Context("when a change is detected in the cluster", func() {
 			It("should emit the new cluster", func() {
-				peersMonitor.Cluster = expectedCluster[:1]
+				peersMonitor.Peers = expectedCluster[:1]
 				mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
 					Return(successResponse, nil).
 					Times(1)
@@ -168,7 +190,7 @@ var _ = FDescribe("PeersMonitor", func() {
 				}()
 				Eventually(ch, requestClusterInterval-1.0,
 					requestClusterInterval/3).Should(Receive())
-				Expect(peersMonitor.Cluster).To(Equal(expectedCluster))
+				Expect(peersMonitor.Peers).To(Equal(expectedCluster))
 			})
 		})
 	})
