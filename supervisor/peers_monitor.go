@@ -12,20 +12,11 @@ type FolderMonitor interface {
 }
 
 const (
-	ClusterKey string = "cluster"
-	AddrKey    string = "addr"
-	// TODO: unify every cluster management constant
-	// StateKey                      string        = "state"
+	ClusterKey                    string        = "cluster"
+	AddrKey                       string        = "addr"
 	PeerStateEnabled              string        = "enabled"
 	DefaultRequestClusterInterval time.Duration = time.Duration(3) * time.Second
 )
-
-// type Peer struct {
-// 	Id    string
-// 	State string
-// }
-
-// type PeerCluster []Peer
 
 type PeersMonitor struct {
 	Peers                  []Peer
@@ -44,12 +35,13 @@ func NewPeersMonitor(etcdClient EtcdRequester) *PeersMonitor {
 func (p *PeersMonitor) Run(ch chan []Peer) {
 	var res *Response
 	var err error
+	var newCLuster *PeerCluster
 	for {
 		res, err = p.etcdClient.Get(ClusterKey, true, true)
 		if err == nil {
-			resPeerCluster := p.parseRawPeerCluster(res)
-			if !reflect.DeepEqual(p.Peers, resPeerCluster) {
-				p.Peers = resPeerCluster
+			newCLuster = NewPeerClusterFromNodes(res.Node.Nodes)
+			if !reflect.DeepEqual(p.Peers, newCLuster.Peers) {
+				p.Peers = newCLuster.Peers
 				ch <- p.Peers
 			}
 		} else {
@@ -57,26 +49,4 @@ func (p *PeersMonitor) Run(ch chan []Peer) {
 		}
 		time.Sleep(p.RequestClusterInterval)
 	}
-}
-
-func (p *PeersMonitor) parseRawPeerCluster(rawPeerCluster *Response) []Peer {
-	peerCluster := []Peer{}
-	rawPeers := rawPeerCluster.Node.Nodes
-	for _, rawPeer := range rawPeers {
-		peerCluster = append(peerCluster, p.parseRawPeer(rawPeer))
-	}
-	return peerCluster
-}
-
-func (p *PeersMonitor) parseRawPeer(rawPeer *Node) Peer {
-	peer := Peer{PeerAddr: rawPeer.Key}
-	for _, attr := range rawPeer.Nodes {
-		switch attr.Key {
-		case AddrKey:
-			peer.Addr = attr.Value
-		case StateKey:
-			peer.State = attr.Value
-		}
-	}
-	return peer
 }
