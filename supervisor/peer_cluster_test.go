@@ -7,7 +7,7 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 )
 
-var _ = Describe("PeerCluster", func() {
+var _ = FDescribe("PeerCluster", func() {
 	var (
 		initPeers   []Peer
 		peerCluster *PeerCluster
@@ -27,6 +27,17 @@ var _ = Describe("PeerCluster", func() {
 			},
 		}
 		peerCluster = NewPeerCluster(initPeers)
+	})
+
+	Describe("GetEnabledPeers", func() {
+		It("should return the enabled peers only", func() {
+			peerCluster.Peers[0].State = ""
+			peerCluster.Peers[1].State = PeerStateEnabled
+			Expect(peerCluster.Peers).To(HaveLen(2))
+			enabledPeers := peerCluster.GetEnabledPeers()
+			Expect(enabledPeers).To(HaveLen(1))
+			Expect(enabledPeers[0].State).To(Equal(PeerStateEnabled))
+		})
 	})
 
 	Describe("Next", func() {
