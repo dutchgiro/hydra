@@ -52,4 +52,18 @@ var _ = Describe("PeerCluster", func() {
 			Expect(peerCluster.HasNext()).To(BeFalse())
 		})
 	})
+
+	Describe("Reset", func() {
+		It("should return the iterator to the beginning of the collection", func() {
+			_, _ = peerCluster.Next()
+			_, _ = peerCluster.Next()
+			peerCluster.Reset()
+			for i := 0; i < len(initPeers); i++ {
+				Expect(peerCluster.HasNext()).To(BeTrue())
+				_, err := peerCluster.Next()
+				Expect(err).ToNot(HaveOccurred())
+			}
+			Expect(peerCluster.HasNext()).To(BeFalse())
+		})
+	})
 })
