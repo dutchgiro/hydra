@@ -7,7 +7,7 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 )
 
-var _ = FDescribe("PeerCluster", func() {
+var _ = Describe("PeerCluster", func() {
 	var (
 		initPeers   []Peer
 		peerCluster *PeerCluster
