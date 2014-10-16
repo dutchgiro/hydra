@@ -40,6 +40,23 @@ var _ = Describe("PeerCluster", func() {
 		})
 	})
 
+	Describe("GetPeerPosition", func() {
+		Context("when peer exists", func() {
+			It("should return the enabled peers only", func() {
+				const expectedPosition int = 1
+				pos, err := peerCluster.GetPeerPosition(peerCluster.Peers[expectedPosition].PeerAddr)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pos).To(Equal(expectedPosition))
+			})
+		})
+		Context("when peer exists", func() {
+			It("should return the enabled peers only", func() {
+				_, err := peerCluster.GetPeerPosition("127.0.0.1:7001")
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
 	Describe("Next", func() {
 		It("should return the next value until end the collection", func() {
 			for i := 0; i < len(initPeers); i++ {

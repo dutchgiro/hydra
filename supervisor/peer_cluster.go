@@ -46,6 +46,15 @@ func (p *PeerCluster) GetEnabledPeers() []Peer {
 	return enabledPeers
 }
 
+func (p *PeerCluster) GetPeerPosition(peerAddr string) (int, error) {
+	for i := 0; i < len(p.Peers); i++ {
+		if p.Peers[i].PeerAddr == peerAddr {
+			return i, nil
+		}
+	}
+	return -1, errors.New("Peer not found")
+}
+
 func (p *PeerCluster) HasNext() bool {
 	if p.current >= len(p.Peers)-1 {
 		return false
