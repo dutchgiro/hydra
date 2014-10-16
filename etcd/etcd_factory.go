@@ -20,6 +20,7 @@ func (e *etcdFactory) Config(config *etcd_config.Config) {
 }
 
 func (e *etcdFactory) Build() *Etcd {
+	// TODO: refactor Etcd visibility
 	etcd := New(e.etcdConfig)
 	etcd.Load()
 	return etcd

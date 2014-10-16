@@ -1,7 +1,7 @@
 package supervisor
 
 type ClusterAnalyzer interface {
-	Run()
+	Run(ch chan string)
 }
 
 const (

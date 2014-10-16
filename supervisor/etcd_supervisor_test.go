@@ -1,5 +1,91 @@
 package supervisor_test
 
+import (
+	hydra_config "github.com/innotech/hydra/config"
+	. "github.com/innotech/hydra/supervisor"
+	mock "github.com/innotech/hydra/supervisor/mock"
+
+	"github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
+	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
+	// . "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
+
+	// "errors"
+	// "fmt"
+	// "net/http"
+	"time"
+)
+
+var _ = Describe("EtcdSupervisor", func() {
+	var (
+		mockCtrl *gomock.Controller
+		// mockEtcdClient  *mock.MockEtcdRequester
+		mockEtcdManager      *mock.MockEtcdController
+		mockClusterInspector *mock.MockClusterAnalyzer
+		hydraConfig          *hydra_config.Config
+		etcdSupervisor       *EtcdSupervisor
+		stateKeyPath         string
+	)
+
+	const (
+		// EtcdStoreRootPath string = "/v2/keys/"
+		peerAddrItself string = "127.0.0.1:7701"
+	)
+
+	// var refreshInterval time.Duration = time.Duration(3000) * time.Millisecond
+
+	BeforeEach(func() {
+		mockCtrl = gomock.NewController(GinkgoT())
+		// mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
+		mockEtcdManager = mock.NewMockEtcdController(mockCtrl)
+		mockClusterInspector = mock.NewMockClusterAnalyzer(mockCtrl)
+		hydraConfig = hydra_config.New()
+		hydraConfig.Peer.Addr = peerAddrItself
+		etcdSupervisor = NewEtcdSupervisor(hydraConfig)
+		// etcdSupervisor.EtcdClient = mockEtcdClient
+		etcdSupervisor.EtcdManager = mockEtcdManager
+		etcdSupervisor.ClusterInspector = mockClusterInspector
+
+		// stateKeyPath = ClusterRootPath + "/" + etcdSupervisor.GetPeerAddr() + "/" + StateKey
+	})
+
+	AfterEach(func() {
+		// fmt.Println("AfterEach")
+		// TODO: Supervisor Stop
+		// time.Sleep(time.Duration(2) * time.Second)
+		// etcdSupervisor.Stop()
+		mockCtrl.Finish()
+	})
+
+	Describe("Run", func() {
+		Context("when a new leader is emited", func() {
+			It("should try restart etcd as slave", func() {
+				clusterInspectorChannel := make(chan Peer)
+				c1 := mockClusterInspector.EXPECT().Run(gomock.Any()).Do(func(ch chan Peer) {
+					clusterInspectorChannel = ch
+				}).Times(1)
+				mockEtcdManager.EXPECT().Restart().Times(1).After(c1)
+
+				go func() {
+					etcdSupervisor.Run()
+				}()
+				peer := Peer{
+					Addr:     "98.245.153.113:4001",
+					PeerAddr: "98.245.153.113:7001",
+					State:    PeerStateEnabled,
+				}
+				clusterInspectorChannel <- peer
+				time.Sleep(time.Duration(100) * time.Millisecond)
+			})
+		})
+		Context("when can not set state", func() {
+			It("should try restart etcd as slave", func() {
+			})
+		})
+	})
+})
+
+// ---------------------------------------------------------------------
+
 // import (
 // 	hydra_config "github.com/innotech/hydra/config"
 // 	. "github.com/innotech/hydra/supervisor"

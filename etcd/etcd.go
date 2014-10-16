@@ -15,6 +15,11 @@ import (
 	"github.com/innotech/hydra/vendors/github.com/coreos/etcd/store"
 )
 
+type EtcdService interface {
+	Start()
+	Stop()
+}
+
 type Etcd struct {
 	Config             *config.Config
 	EtcdServer         *server.Server
