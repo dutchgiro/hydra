@@ -150,6 +150,10 @@ func (e *EtcdClient) saveConfig() error {
 	return nil
 }
 
+func AddHttpProtocol(addr string) string {
+	return "http://" + addr
+}
+
 func (e *EtcdClient) WithMachineAddr(machineAddr string) EtcdRequester {
 	e.machineAddr = machineAddr
 
