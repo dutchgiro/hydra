@@ -6,7 +6,7 @@ import (
 
 type EtcdBuilder interface {
 	Build() *Etcd
-	Config(config *etcd_config.Config) error
+	Config(config *etcd_config.Config)
 }
 
 type etcdFactory struct {
