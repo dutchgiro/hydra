@@ -8,11 +8,10 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
-	// "errors"
 	"time"
 )
 
-var _ = FDescribe("PeersMonitor", func() {
+var _ = Describe("PeersMonitor", func() {
 	const (
 		peerAddrItself                   string        = "127.0.0.1:7701"
 		stateKeyTTL                      uint64        = 5
@@ -146,22 +145,6 @@ var _ = FDescribe("PeersMonitor", func() {
 			}()
 			time.Sleep(DefaultRequestClusterInterval - time.Duration(1)*time.Second)
 		})
-		// Context("when the cluster has not been requested previously", func() {
-		// 	It("should save the cluster without emit it as a change", func() {
-		// 		c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
-		// 			Return(successResponse, nil).
-		// 			Times(1)
-		// 		mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
-		// 			Return(successResponse, nil).
-		// 			AnyTimes().After(c1)
-
-		// 		go func() {
-		// 			peersMonitor.Run(ch)
-		// 		}()
-		// 		Consistently(ch, requestClusterInterval/2, requestClusterInterval/4).ShouldNot(Receive())
-		// 		Expect(peersMonitor.Cluster).To(Equal(expectedCluster))
-		// 	})
-		// })
 		Context("when no change is detected in the cluster", func() {
 			It("should not emit any cluster", func() {
 				peersMonitor.Peers = expectedCluster
