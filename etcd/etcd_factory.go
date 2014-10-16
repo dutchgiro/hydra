@@ -13,7 +13,7 @@ type etcdFactory struct {
 	etcdConfig *etcd_config.Config
 }
 
-var EtcdFactory *etcdFactory = new(etcdFactory)
+var EtcdFactory EtcdBuilder = new(etcdFactory)
 
 func (e *etcdFactory) Config(config *etcd_config.Config) {
 	e.etcdConfig = config
