@@ -9,9 +9,7 @@ import (
 	"github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
 
 	. "github.com/innotech/hydra/vendors/github.com/onsi/ginkgo"
-	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 
-	"io/ioutil"
 	"os"
 )
 
@@ -28,17 +26,16 @@ func existsPath(path string) (bool, error) {
 
 var _ = FDescribe("EtcdManager", func() {
 	var (
-		mockCtrl *gomock.Controller
-		// etcdFactoryCache *EtcdFactory
+		mockCtrl        *gomock.Controller
 		mockEtcdFactory *mock.MockEtcdBuilder
 		mockEtcd        *mock.MockEtcdService
 		etcdManager     *EtcdManager
 	)
 
+	etcdFactoryCache := EtcdFactory
+
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		// etcdFactoryCache = EtcdFactory
-		// EtcdFactory = mock.NewMockEtcdBuilder(mockCtrl)
 		mockEtcdFactory = mock.NewMockEtcdBuilder(mockCtrl)
 		mockEtcd = mock.NewMockEtcdService(mockCtrl)
 		etcdManager = NewEtcdManager()
@@ -46,16 +43,23 @@ var _ = FDescribe("EtcdManager", func() {
 
 	AfterEach(func() {
 		mockCtrl.Finish()
-		// EtcdFactory = etcdFactoryCache
+		EtcdFactory = etcdFactoryCache
 	})
 
 	shouldStartSuccessfully := func(call *gomock.Call) {
 		It("should configure and start etcd servers", func() {
 			EtcdFactory = mockEtcdFactory
-			c1 := EtcdFactory.EXPECT().Config(gomock.Any()).
-				Times(1).After(call)
-			c2 := EtcdFactory.EXPECT().Build().
-				Return(mockEtcd).Times(1).After(c1)
+			var c1 *gomock.Call
+			if call == nil {
+				c1 = mockEtcdFactory.EXPECT().Config(gomock.Any()).
+					Times(1)
+			} else {
+				c1 = mockEtcdFactory.EXPECT().Config(gomock.Any()).
+					Times(1).After(call)
+			}
+			c2 := mockEtcdFactory.EXPECT().Build().
+				Return(mockEtcd).
+				Times(1).After(c1)
 			mockEtcd.EXPECT().Start().
 				Times(1).After(c2)
 
@@ -69,53 +73,21 @@ var _ = FDescribe("EtcdManager", func() {
 
 	shouldStopSuccessfully := func() (call *gomock.Call) {
 		It("should close etcd listeners", func() {
-			dir, _ := ioutil.TempDir("", "")
-			file, _ := ioutil.TempFile(dir, "")
-			file.WriteString("Test content")
-			file.Close()
-			etcdManager.EtcdService.Config.DataDir = dir
-
+			etcdManager.EtcdService = mockEtcd
 			call = mockEtcd.EXPECT().Stop().Times(1)
 			etcdManager.Stop()
-			exists, err := existsPath(dir)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(exists).To(BeFalse())
 		})
 		return
 	}
 
 	Describe("Start", func() {
 		shouldStartSuccessfully(nil)
-		// It("should configure and start etcd servers", func() {
-		// 	c1 := EtcdFactory.EXPECT().Config(gomock.Any()).
-		// 		Times(1)
-		// 	c2 := EtcdFactory.EXPECT().Build().
-		// 		Return(mockEtcd).Times(1).After(c1)
-		// 	mockEtcd.EXPECT().Start().
-		// 		Times(1).After(c2)
-
-		// 	etcdManager.Start()
-		// })
 	})
 	Describe("Stop", func() {
 		shouldStopSuccessfully()
-		// It("should close etcd listeners", func() {
-		// 	dir, _ := ioutil.TempFile("", "")
-		// 	file, _ := ioutil.TempFile(dir, "")
-		// 	file.WriteString("Test content")
-		// 	file.Close()
-		// 	etcdManager.etcdService.Config.DataDir = dir
-
-		// 	mockEtcd.EXPECT().Stop().Times(1)
-		// 	etcdManager.Stop()
-		// 	exists, err := existsPath(dir)
-		// 	Expect(err).ToNot(HaveOcurred())
-		// 	Expect(exists).To(BeFalse())
-		// })
 	})
 	Describe("Restart", func() {
 		callToStop := shouldStopSuccessfully()
 		shouldStartSuccessfully(callToStop)
-		// TODO: Call Stop and Start tests
 	})
 })

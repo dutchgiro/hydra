@@ -3,6 +3,7 @@ package etcd
 import (
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/innotech/hydra/vendors/github.com/coreos/etcd/third_party/github.com/coreos/raft"
@@ -16,6 +17,7 @@ import (
 )
 
 type EtcdService interface {
+	Load()
 	Start()
 	Stop()
 }
@@ -175,6 +177,9 @@ func (e *Etcd) Stop() {
 	}
 	err = e.PeerServerListener.Close()
 	if err != nil {
+		log.Fatal(err.Error())
+	}
+	if err = os.RemoveAll(e.Config.DataDir); err != nil {
 		log.Fatal(err.Error())
 	}
 }

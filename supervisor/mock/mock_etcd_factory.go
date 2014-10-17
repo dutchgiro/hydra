@@ -31,9 +31,9 @@ func (_m *MockEtcdBuilder) EXPECT() *_MockEtcdBuilderRecorder {
 	return _m.recorder
 }
 
-func (_m *MockEtcdBuilder) Build() *Etcd {
+func (_m *MockEtcdBuilder) Build() EtcdService {
 	ret := _m.ctrl.Call(_m, "Build")
-	ret0, _ := ret[0].(*Etcd)
+	ret0, _ := ret[0].(EtcdService)
 	return ret0
 }
 

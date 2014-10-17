@@ -5,7 +5,7 @@ import (
 )
 
 type EtcdBuilder interface {
-	Build() *Etcd
+	Build() EtcdService
 	Config(config *etcd_config.Config)
 }
 
@@ -19,7 +19,7 @@ func (e *etcdFactory) Config(config *etcd_config.Config) {
 	e.etcdConfig = config
 }
 
-func (e *etcdFactory) Build() *Etcd {
+func (e *etcdFactory) Build() EtcdService {
 	// TODO: refactor Etcd visibility
 	etcd := New(e.etcdConfig)
 	etcd.Load()

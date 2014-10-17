@@ -28,6 +28,14 @@ func (_m *MockEtcdService) EXPECT() *_MockEtcdServiceRecorder {
 	return _m.recorder
 }
 
+func (_m *MockEtcdService) Load() {
+	_m.ctrl.Call(_m, "Load")
+}
+
+func (_mr *_MockEtcdServiceRecorder) Load() *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Load")
+}
+
 func (_m *MockEtcdService) Start() {
 	_m.ctrl.Call(_m, "Start")
 }

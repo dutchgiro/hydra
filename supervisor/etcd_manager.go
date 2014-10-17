@@ -2,10 +2,7 @@ package supervisor
 
 import (
 	"github.com/innotech/hydra/etcd"
-	"github.com/innotech/hydra/log"
 	etcd_config "github.com/innotech/hydra/vendors/github.com/coreos/etcd/config"
-
-	"os"
 )
 
 type EtcdController interface {
@@ -15,7 +12,7 @@ type EtcdController interface {
 }
 
 type EtcdManager struct {
-	EtcdService *etcd.Etcd
+	EtcdService etcd.EtcdService
 }
 
 func NewEtcdManager() *EtcdManager {
@@ -35,11 +32,4 @@ func (e *EtcdManager) Start(config *etcd_config.Config) {
 
 func (e *EtcdManager) Stop() {
 	e.EtcdService.Stop()
-	e.removeEtcdDataFiles()
-}
-
-func (e *EtcdManager) removeEtcdDataFiles() {
-	if err := os.RemoveAll(e.EtcdService.Config.DataDir); err != nil {
-		log.Fatal(err.Error())
-	}
 }
