@@ -1,6 +1,7 @@
 package supervisor
 
 import (
+	"github.com/innotech/hydra/database/connector"
 	"github.com/innotech/hydra/etcd"
 	etcd_config "github.com/innotech/hydra/vendors/github.com/coreos/etcd/config"
 )
@@ -28,6 +29,8 @@ func (e *EtcdManager) Start(config *etcd_config.Config) {
 	etcd.EtcdFactory.Config(config)
 	e.EtcdService = etcd.EtcdFactory.Build()
 	e.EtcdService.Start()
+	// TODO: Maybe change argument type to EtcdService interface
+	connector.SetEtcdConnector(e.EtcdService.(*etcd.Etcd))
 }
 
 func (e *EtcdManager) Stop() {

@@ -11,12 +11,12 @@ type FolderMonitor interface {
 	Run(ch chan []Peer)
 }
 
-const (
-	ClusterKey                    string        = "cluster"
-	AddrKey                       string        = "addr"
-	PeerStateEnabled              string        = "enabled"
-	DefaultRequestClusterInterval time.Duration = time.Duration(3) * time.Second
-)
+// const (
+// 	ClusterKey                    string        = "cluster"
+// 	AddrKey                       string        = "addr"
+// 	PeerStateEnabled              string        = "enabled"
+// 	DefaultRequestClusterInterval time.Duration = time.Duration(3) * time.Second
+// )
 
 type PeersMonitor struct {
 	Peers                  []Peer

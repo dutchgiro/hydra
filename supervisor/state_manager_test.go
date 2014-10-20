@@ -59,7 +59,7 @@ var _ = Describe("StateManager", func() {
 
 	Describe("Run", func() {
 		It("should have state Running", func() {
-			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(StateAvailable),
+			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(PeerStateEnabled),
 				gomock.Eq(stateManager.PeerStateKeyTTL), gomock.Eq(""), gomock.Any(), gomock.Any()).
 				Return(successResponse, nil).AnyTimes()
 
@@ -72,11 +72,11 @@ var _ = Describe("StateManager", func() {
 		})
 
 		It("should be able to post the node state", func() {
-			c1 := mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(StateAvailable),
+			c1 := mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(PeerStateEnabled),
 				gomock.Eq(stateManager.PeerStateKeyTTL), gomock.Eq(""), gomock.Eq(uint64(0)), gomock.Eq(False)).
 				Return(successResponse, nil).Times(1)
 
-			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(StateAvailable),
+			mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(PeerStateEnabled),
 				gomock.Eq(stateManager.PeerStateKeyTTL), gomock.Eq(""), gomock.Not(uint64(0)), gomock.Eq(Unknow)).
 				Return(successResponse, nil).AnyTimes().After(c1)
 
@@ -88,7 +88,7 @@ var _ = Describe("StateManager", func() {
 
 		Context("when it can not post the node state", func() {
 			It("should report the failure and stop", func() {
-				mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(StateAvailable),
+				mockEtcdClient.EXPECT().CompareAndSwap(gomock.Eq(stateManager.PeerStateKey), gomock.Eq(PeerStateEnabled),
 					gomock.Eq(stateManager.PeerStateKeyTTL), gomock.Eq(""), gomock.Eq(uint64(0)), gomock.Eq(False)).
 					Return(nil, errors.New("Write operation impossible")).Times(int(stateManager.NumOfSetStateRetries))
 

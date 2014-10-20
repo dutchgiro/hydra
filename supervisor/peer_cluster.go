@@ -33,7 +33,6 @@ func NewPeerClusterFromNodes(nodes Nodes) *PeerCluster {
 		current: -1,
 		Peers:   parseRawPeerCluster(nodes),
 	}
-
 }
 
 func (p *PeerCluster) GetEnabledPeers() []Peer {

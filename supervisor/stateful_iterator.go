@@ -1,6 +1,6 @@
 package supervisor
 
-type StatefulIterator interface {
-	Next() bool
-	Value() interface{}
-}
+// type StatefulIterator interface {
+// 	Next() bool
+// 	Value() interface{}
+// }

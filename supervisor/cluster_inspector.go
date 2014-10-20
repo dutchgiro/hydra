@@ -4,10 +4,10 @@ type ClusterAnalyzer interface {
 	Run(ch chan string)
 }
 
-const (
-	LeaderKey   string = "leader"
-	MachinesKey string = "machines"
-)
+// const (
+// 	LeaderKey   string = "leader"
+// 	MachinesKey string = "machines"
+// )
 
 type ClusterInspector struct {
 	EtcdClient   EtcdRequester

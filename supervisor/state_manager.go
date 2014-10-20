@@ -8,12 +8,16 @@ type StateController interface {
 	Run(ch chan StateControllerState)
 }
 
-const (
-	ClusterRootPath              string = "cluster"
-	DefaultMaxAttemptsToSetState uint   = 3
-	StateAvailable               string = "available"
-	StateKey                     string = "state"
-)
+// const (
+// 	ClusterRootPath              string = "cluster"
+// 	DefaultMaxAttemptsToSetState uint   = 3
+// 	StateAvailable               string = "available"
+// 	StateKey                     string = "state"
+// )
+
+// const (
+// 	PeerStateAvailable
+// )
 
 type StateControllerState uint8
 
@@ -40,7 +44,7 @@ func NewStateManager(durationBetweenPublicationsState time.Duration, etcdClient 
 		etcdClient:                       etcdClient,
 		modifiedIndexKeyState:            0,
 		NumOfSetStateRetries:             DefaultMaxAttemptsToSetState,
-		PeerStateKey:                     ClusterRootPath + "/" + peerAddr + "/" + StateKey,
+		PeerStateKey:                     ClusterKey + "/" + peerAddr + "/" + StateKey,
 		PeerStateKeyTTL:                  stateKeyTTL,
 		state:                            Stopped,
 	}
@@ -78,7 +82,7 @@ func (s *StateManager) setNodeState() error {
 
 	stateKeyExistence := s.getStateKeyExistence()
 	for i := 0; i < int(s.NumOfSetStateRetries); i++ {
-		res, err = s.etcdClient.CompareAndSwap(s.PeerStateKey, StateAvailable, s.PeerStateKeyTTL,
+		res, err = s.etcdClient.CompareAndSwap(s.PeerStateKey, PeerStateEnabled, s.PeerStateKeyTTL,
 			"", s.modifiedIndexKeyState, stateKeyExistence)
 		if err == nil && res != nil {
 			s.modifiedIndexKeyState = res.Node.ModifiedIndex
