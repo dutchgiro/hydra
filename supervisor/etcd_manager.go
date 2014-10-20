@@ -6,8 +6,8 @@ import (
 )
 
 type EtcdController interface {
-	Restart()
-	Start()
+	Restart(config *etcd_config.Config)
+	Start(config *etcd_config.Config)
 	Stop()
 }
 
