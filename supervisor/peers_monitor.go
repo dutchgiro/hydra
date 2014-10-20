@@ -11,13 +11,6 @@ type FolderMonitor interface {
 	Run(ch chan []Peer)
 }
 
-// const (
-// 	ClusterKey                    string        = "cluster"
-// 	AddrKey                       string        = "addr"
-// 	PeerStateEnabled              string        = "enabled"
-// 	DefaultRequestClusterInterval time.Duration = time.Duration(3) * time.Second
-// )
-
 type PeersMonitor struct {
 	Peers                  []Peer
 	etcdClient             EtcdRequester
@@ -45,7 +38,7 @@ func (p *PeersMonitor) Run(ch chan []Peer) {
 				ch <- p.Peers
 			}
 		} else {
-			log.Warn("Unreachable cluster container - thrown error:  " + err.Error())
+			log.Warn("Unreachable cluster container - thrown error: " + err.Error())
 		}
 		time.Sleep(p.RequestClusterInterval)
 	}

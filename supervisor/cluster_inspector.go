@@ -4,25 +4,25 @@ type ClusterAnalyzer interface {
 	Run(ch chan string)
 }
 
-// const (
-// 	LeaderKey   string = "leader"
-// 	MachinesKey string = "machines"
-// )
-
 type ClusterInspector struct {
 	EtcdClient   EtcdRequester
 	configPeers  []string
-	myPeerAddr   string
+	ownAddr      string
 	PeerCluster  *PeerCluster
 	PeersMonitor FolderMonitor
 }
 
-func NewClusterInspector(ownAddr, ownPeerAddr string, knownPeers []string) *ClusterInspector {
+// func NewClusterInspector(ownAddr, ownPeerAddr string, knownPeers []string) *ClusterInspector {
+func NewClusterInspector(ownAddr string, knownPeers []string) *ClusterInspector {
+	peers := []Peer{}
+	for i := 0; i < len(knownPeers); i++ {
+		peers = append(peers, Peer{Addr: knownPeers[i]})
+	}
 	return &ClusterInspector{
 		configPeers:  []string{},
 		EtcdClient:   NewEtcdClient([]string{ownAddr}),
-		myPeerAddr:   ownPeerAddr,
-		PeerCluster:  NewPeerCluster([]Peer{}),
+		ownAddr:      ownAddr,
+		PeerCluster:  NewPeerCluster(peers),
 		PeersMonitor: NewPeersMonitor(NewEtcdClient([]string{ownAddr}).WithMachineAddr(ownAddr)),
 	}
 }
@@ -41,7 +41,8 @@ OuterLoop:
 			if leader != nil {
 				foreignPeerCluster, err := c.getCluster(AddHttpProtocol((*leader).Addr))
 				if err == nil {
-					if c.shouldTryToJoinTheCluster((*leader).PeerAddr, foreignPeerCluster) {
+					if c.shouldTryToJoinTheCluster((*leader).Addr, foreignPeerCluster) {
+						// TODO: Get PeerAddr from foreignPeerCluster data
 						ch <- AddHttpProtocol((*leader).PeerAddr)
 						break OuterLoop
 					}
@@ -52,23 +53,23 @@ OuterLoop:
 	}
 }
 
-func (c *ClusterInspector) shouldTryToJoinTheCluster(foreignLeaderPeerAddr string, foreignCluster *PeerCluster) bool {
+func (c *ClusterInspector) shouldTryToJoinTheCluster(foreignLeaderAddr string, foreignCluster *PeerCluster) bool {
 	if len(foreignCluster.GetEnabledPeers()) > len(c.PeerCluster.GetEnabledPeers()) {
 		return true
 	} else if len(foreignCluster.GetEnabledPeers()) < len(c.PeerCluster.GetEnabledPeers()) {
 		return false
-	} else if c.iHavePriorityOverCluster(foreignLeaderPeerAddr, foreignCluster) {
+	} else if c.iHavePriorityOverCluster(foreignLeaderAddr, foreignCluster) {
 		return false
 	}
 	return true
 }
 
-func (c *ClusterInspector) iHavePriorityOverCluster(foreignLeaderPeerAddr string, foreignCluster *PeerCluster) bool {
-	myPositionInForeignCluster, err := foreignCluster.GetPeerPosition(c.myPeerAddr)
+func (c *ClusterInspector) iHavePriorityOverCluster(foreignLeaderAddr string, foreignCluster *PeerCluster) bool {
+	myPositionInForeignCluster, err := foreignCluster.GetPeerPosition(c.ownAddr)
 	if err != nil {
 		return false
 	}
-	foreignLeaderPositionInOwnCluster, err := c.PeerCluster.GetPeerPosition(foreignLeaderPeerAddr)
+	foreignLeaderPositionInOwnCluster, err := c.PeerCluster.GetPeerPosition(foreignLeaderAddr)
 	if err != nil {
 		return true
 	}

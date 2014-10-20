@@ -1,7 +1,7 @@
 package supervisor
 
 import (
-	hydra_config "github.com/innotech/hydra/config"
+	etcd_config "github.com/innotech/hydra/vendors/github.com/coreos/etcd/config"
 
 	"time"
 )
@@ -16,25 +16,29 @@ const (
 	DefaultMaxAttemptsToSetState  uint          = 3
 	DefaultRequestClusterInterval time.Duration = time.Duration(3) * time.Second
 	LeaderKey                     string        = "leader"
+	PeerAddrKey                   string        = "peerAddr"
 	PeerStateEnabled              string        = "enabled"
 	StateKey                      string        = "state"
 )
 
 type EtcdSupervisor struct {
-	hydraConfig      *hydra_config.Config
+	etcdConfig       *etcd_config.Config
 	ClusterInspector ClusterAnalyzer
 	EtcdManager      EtcdController
 	StateManager     StateController
 }
 
-func NewEtcdSupervisor(config *hydra_config.Config) *EtcdSupervisor {
+func NewEtcdSupervisor(config *etcd_config.Config) *EtcdSupervisor {
+	configPeers := config.Peers
+	config.Peers = []string{}
 	return &EtcdSupervisor{
-		hydraConfig:      config,
-		ClusterInspector: NewClusterInspector(config.EtcdAddr, config.Peer.Addr, config.Peers),
+		etcdConfig: config,
+		// ClusterInspector: NewClusterInspector(config.Addr, config.Peer.Addr, configPeers),
+		ClusterInspector: NewClusterInspector(config.Addr, configPeers),
 		EtcdManager:      NewEtcdManager(),
 		StateManager: NewStateManager(
 			time.Duration(config.Peer.HeartbeatTimeout*3)*time.Millisecond,
-			NewEtcdClient([]string{config.EtcdAddr}).WithMachineAddr(config.EtcdAddr),
+			NewEtcdClient([]string{config.Addr}).WithMachineAddr(config.Addr),
 			config.Peer.Addr,
 			// TODO: should be calculates from first argument
 			uint64(config.Peer.HeartbeatTimeout*6),
@@ -43,6 +47,8 @@ func NewEtcdSupervisor(config *hydra_config.Config) *EtcdSupervisor {
 }
 
 func (e *EtcdSupervisor) Run() {
+	e.EtcdManager.Start(e.etcdConfig)
+
 	stateManagerChannel := make(chan StateControllerState)
 	e.StateManager.Run(stateManagerChannel)
 	clusterInspectorChannel := make(chan string)
@@ -52,11 +58,11 @@ func (e *EtcdSupervisor) Run() {
 	for {
 		select {
 		case <-stateManagerChannel:
-			e.hydraConfig.EtcdConf.Peers = []string{}
-			e.EtcdManager.Restart(e.hydraConfig.EtcdConf)
+			e.etcdConfig.Peers = []string{}
+			e.EtcdManager.Restart(e.etcdConfig)
 		case newLeader = <-clusterInspectorChannel:
-			e.hydraConfig.EtcdConf.Peers = []string{newLeader}
-			e.EtcdManager.Restart(e.hydraConfig.EtcdConf)
+			e.etcdConfig.Peers = []string{newLeader}
+			e.EtcdManager.Restart(e.etcdConfig)
 		}
 	}
 }

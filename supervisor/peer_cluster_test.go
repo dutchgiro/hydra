@@ -7,7 +7,7 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 )
 
-var _ = Describe("PeerCluster", func() {
+var _ = FDescribe("PeerCluster", func() {
 	var (
 		initPeers   []Peer
 		peerCluster *PeerCluster
@@ -40,18 +40,36 @@ var _ = Describe("PeerCluster", func() {
 		})
 	})
 
+	Describe("GetPeerByAddr", func() {
+		Context("when peer doesn't exist", func() {
+			It("should return an error", func() {
+				const nonexistentPeerAddr string = "98.245.153.113:4001"
+				foundPeer, err := peerCluster.GetPeerByAddr(nonexistentPeerAddr)
+				Expect(err).To(HaveOccurred())
+				Expect(foundPeer).To(Equal(Peer{}))
+			})
+		})
+		Context("when peer exists", func() {
+			It("should return the associated peer", func() {
+				foundPeer, err := peerCluster.GetPeerByAddr(peerCluster.Peers[1].Addr)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(foundPeer).To(Equal(peerCluster.Peers[1]))
+			})
+		})
+	})
+
 	Describe("GetPeerPosition", func() {
 		Context("when peer exists", func() {
 			It("should return the enabled peers only", func() {
 				const expectedPosition int = 1
-				pos, err := peerCluster.GetPeerPosition(peerCluster.Peers[expectedPosition].PeerAddr)
+				pos, err := peerCluster.GetPeerPosition(peerCluster.Peers[expectedPosition].Addr)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(pos).To(Equal(expectedPosition))
 			})
 		})
 		Context("when peer exists", func() {
 			It("should return the enabled peers only", func() {
-				_, err := peerCluster.GetPeerPosition("127.0.0.1:7001")
+				_, err := peerCluster.GetPeerPosition("127.0.0.1:4001")
 				Expect(err).To(HaveOccurred())
 			})
 		})

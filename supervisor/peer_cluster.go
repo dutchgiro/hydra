@@ -16,6 +16,8 @@ type IterableCluster interface {
 	SetPeers(peers []Peer)
 }
 
+var peerNotFoundError error = errors.New("Peer not found")
+
 type PeerCluster struct {
 	current int
 	Peers   []Peer
@@ -45,13 +47,22 @@ func (p *PeerCluster) GetEnabledPeers() []Peer {
 	return enabledPeers
 }
 
+func (p *PeerCluster) GetPeerByAddr(addr string) (Peer, error) {
+	for _, peer := range p.Peers {
+		if peer.Addr == addr {
+			return peer, nil
+		}
+	}
+	return Peer{}, peerNotFoundError
+}
+
 func (p *PeerCluster) GetPeerPosition(peerAddr string) (int, error) {
 	for i := 0; i < len(p.Peers); i++ {
 		if p.Peers[i].PeerAddr == peerAddr {
 			return i, nil
 		}
 	}
-	return -1, errors.New("Peer not found")
+	return -1, peerNotFoundError
 }
 
 func (p *PeerCluster) HasNext() bool {

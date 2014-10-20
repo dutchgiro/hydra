@@ -27,11 +27,13 @@ var _ = Describe("ClusterInspector", func() {
 		clusterInspector *ClusterInspector
 	)
 
+	var configPeers []string = []string{}
+
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		mockEtcdClient = mock.NewMockEtcdRequester(mockCtrl)
 		mockPeersMonitor = mock.NewMockFolderMonitor(mockCtrl)
-		clusterInspector = NewClusterInspector(etcdAddrItself, peerAddrItself, []string{})
+		clusterInspector = NewClusterInspector(etcdAddrItself, configPeers)
 		clusterInspector.EtcdClient = mockEtcdClient
 		clusterInspector.PeersMonitor = mockPeersMonitor
 		ch = make(chan string)
@@ -80,15 +82,15 @@ var _ = Describe("ClusterInspector", func() {
 	expectedPeers := []Peer{peer0, peer1}
 
 	node0 := &Node{
-		Key:        peer0.PeerAddr,
+		Key:        peer0.Addr,
 		Value:      "",
 		Dir:        true,
 		Expiration: nil,
 		TTL:        3,
 		Nodes: []*Node{
 			&Node{
-				Key:           AddrKey,
-				Value:         peer0.Addr,
+				Key:           PeerAddrKey,
+				Value:         peer0.PeerAddr,
 				Dir:           false,
 				Expiration:    nil,
 				TTL:           3,
@@ -111,15 +113,15 @@ var _ = Describe("ClusterInspector", func() {
 		CreatedIndex:  modifiedIndex - 1,
 	}
 	node1 := &Node{
-		Key:        peer1.PeerAddr,
+		Key:        peer1.Addr,
 		Value:      "",
 		Dir:        true,
 		Expiration: nil,
 		TTL:        3,
 		Nodes: []*Node{
 			&Node{
-				Key:           AddrKey,
-				Value:         peer1.Addr,
+				Key:           PeerAddrKey,
+				Value:         peer1.PeerAddr,
 				Dir:           false,
 				Expiration:    nil,
 				TTL:           3,
@@ -142,15 +144,15 @@ var _ = Describe("ClusterInspector", func() {
 		CreatedIndex:  modifiedIndex - 1,
 	}
 	node2 := &Node{
-		Key:        peer2.PeerAddr,
+		Key:        peer2.Addr,
 		Value:      "",
 		Dir:        true,
 		Expiration: nil,
 		TTL:        3,
 		Nodes: []*Node{
 			&Node{
-				Key:           AddrKey,
-				Value:         peer2.Addr,
+				Key:           PeerAddrKey,
+				Value:         peer2.PeerAddr,
 				Dir:           false,
 				Expiration:    nil,
 				TTL:           3,
@@ -197,7 +199,7 @@ var _ = Describe("ClusterInspector", func() {
 				go func() {
 					clusterInspector.Run(ch)
 				}()
-				Expect(clusterInspector.PeerCluster.Peers).To(Equal([]Peer{}))
+				Expect(clusterInspector.PeerCluster.Peers).To(Equal(configPeers))
 				time.Sleep(time.Duration(200) * time.Millisecond)
 				peersMonitorChannel <- expectedPeers
 				Expect(clusterInspector.PeerCluster.Peers).To(Equal(expectedPeers))
