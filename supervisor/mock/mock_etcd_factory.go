@@ -4,10 +4,10 @@
 package mock_supervisor
 
 import (
-	. "github.com/innotech/hydra/etcd"
-
 	gomock "github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
 	config "github.com/innotech/hydra/vendors/github.com/coreos/etcd/config"
+
+	. "github.com/innotech/hydra/etcd"
 )
 
 // Mock of EtcdBuilder interface

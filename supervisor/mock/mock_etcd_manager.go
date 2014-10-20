@@ -5,6 +5,7 @@ package mock_supervisor
 
 import (
 	gomock "github.com/innotech/hydra/vendors/code.google.com/p/gomock/gomock"
+	config "github.com/innotech/hydra/vendors/github.com/coreos/etcd/config"
 )
 
 // Mock of EtcdController interface
@@ -28,20 +29,20 @@ func (_m *MockEtcdController) EXPECT() *_MockEtcdControllerRecorder {
 	return _m.recorder
 }
 
-func (_m *MockEtcdController) Restart() {
-	_m.ctrl.Call(_m, "Restart")
+func (_m *MockEtcdController) Restart(config *config.Config) {
+	_m.ctrl.Call(_m, "Restart", config)
 }
 
-func (_mr *_MockEtcdControllerRecorder) Restart() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Restart")
+func (_mr *_MockEtcdControllerRecorder) Restart(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Restart", arg0)
 }
 
-func (_m *MockEtcdController) Start() {
-	_m.ctrl.Call(_m, "Start")
+func (_m *MockEtcdController) Start(config *config.Config) {
+	_m.ctrl.Call(_m, "Start", config)
 }
 
-func (_mr *_MockEtcdControllerRecorder) Start() *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start")
+func (_mr *_MockEtcdControllerRecorder) Start(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Start", arg0)
 }
 
 func (_m *MockEtcdController) Stop() {
