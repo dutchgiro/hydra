@@ -12,6 +12,7 @@ import (
 	"github.com/innotech/hydra/load_balancer"
 	"github.com/innotech/hydra/log"
 	"github.com/innotech/hydra/server"
+	"github.com/innotech/hydra/supervisor"
 )
 
 func main() {
@@ -41,67 +42,57 @@ func main() {
 	}
 
 	// Launch services
-	var etcd = etcd.New(conf.EtcdConf)
-	etcd.Load()
-	hydraEnv := os.Getenv("HYDRA_ENV")
-	if hydraEnv == "ETCD_TEST" {
-		etcd.Start(true)
-	} else {
-		go func() {
-			var withEtcdServer bool = false
-			if conf.EtcdAddr != "" {
-				withEtcdServer = true
-			}
-			etcd.Start(withEtcdServer)
-		}()
+	// TODO: refactor visibility of supervisor component, export only NewEtcdSupervisor
+	// TODO: Maybe pass conf.EtcdConf by reference
+	etcdSupervisor := supervisor.NewEtcdSupervisor(conf.EtcdConf)
+	go func() {
+		etcdSupervisor.Run()
+	}()
 
-		connector.SetEtcdConnector(etcd)
-
-		// Private Server API
-		privateHydraListener, err := net.Listen("tcp", conf.PrivateAPIAddr)
-		if err != nil {
-			log.Fatalf("Failed to create hydra private listener: ", err)
-		}
-		var privateServer = server.NewPrivateServer(privateHydraListener, conf.InstanceExpirationTime)
-		privateServer.RegisterHandlers()
-		go func() {
-			log.Infof("hydra private server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PrivateAPIAddr, "http://"+conf.PrivateAPIAddr)
-			log.Fatal(http.Serve(privateServer.Listener, privateServer.Router))
-		}()
-
-		// Public Server API
-		var loadBalancerFrontendEndpoint string = "ipc://" + conf.Name + "-frontend.ipc"
-		publicHydraListener, err := net.Listen("tcp", conf.PublicAPIAddr)
-		if err != nil {
-			log.Fatalf("Failed to create hydra public listener: ", err)
-		}
-		var publicServer = server.NewPublicServer(publicHydraListener, loadBalancerFrontendEndpoint, conf.BalanceTimeout)
-		publicServer.RegisterHandlers()
-		go func() {
-			log.Infof("hydra public server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PublicAPIAddr, "http://"+conf.PublicAPIAddr)
-			log.Fatal(http.Serve(publicServer.Listener, publicServer.Router))
-		}()
-
-		// Load applications.
-		var appsConfig = config.NewApplicationsConfig()
-		if _, err := os.Stat(conf.AppsFilePath); os.IsNotExist(err) {
-			log.Warnf("Unable to find apps file: %s", err)
-		} else {
-			if err := appsConfig.Load(conf.AppsFilePath); err != nil {
-				log.Fatalf("Unable to load applications: %s", err)
-			}
-		}
-
-		time.Sleep(1 * time.Second)
-		// Persist Configured applications
-		if err := appsConfig.Persists(); err != nil {
-			log.Fatalf("Failed to save configured applications: ", err)
-		}
-
-		// Load Balancer
-		var inprocBackendEndpoint string = "ipc://" + conf.Name + "-backend.ipc"
-		loadBalancer := load_balancer.NewLoadBalancer(loadBalancerFrontendEndpoint, "tcp://"+conf.LoadBalancerAddr, inprocBackendEndpoint)
-		defer loadBalancer.Close()
-		loadBalancer.Run()
+	// Private Server API
+	privateHydraListener, err := net.Listen("tcp", conf.PrivateAPIAddr)
+	if err != nil {
+		log.Fatalf("Failed to create hydra private listener: ", err)
 	}
+	var privateServer = server.NewPrivateServer(privateHydraListener, conf.InstanceExpirationTime)
+	privateServer.RegisterHandlers()
+	go func() {
+		log.Infof("hydra private server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PrivateAPIAddr, "http://"+conf.PrivateAPIAddr)
+		log.Fatal(http.Serve(privateServer.Listener, privateServer.Router))
+	}()
+
+	// Public Server API
+	var loadBalancerFrontendEndpoint string = "ipc://" + conf.Name + "-frontend.ipc"
+	publicHydraListener, err := net.Listen("tcp", conf.PublicAPIAddr)
+	if err != nil {
+		log.Fatalf("Failed to create hydra public listener: ", err)
+	}
+	var publicServer = server.NewPublicServer(publicHydraListener, loadBalancerFrontendEndpoint, conf.BalanceTimeout)
+	publicServer.RegisterHandlers()
+	go func() {
+		log.Infof("hydra public server [name %s, listen on %s, advertised url %s]", conf.Name, conf.PublicAPIAddr, "http://"+conf.PublicAPIAddr)
+		log.Fatal(http.Serve(publicServer.Listener, publicServer.Router))
+	}()
+
+	// Load applications.
+	var appsConfig = config.NewApplicationsConfig()
+	if _, err := os.Stat(conf.AppsFilePath); os.IsNotExist(err) {
+		log.Warnf("Unable to find apps file: %s", err)
+	} else {
+		if err := appsConfig.Load(conf.AppsFilePath); err != nil {
+			log.Fatalf("Unable to load applications: %s", err)
+		}
+	}
+
+	time.Sleep(1 * time.Second)
+	// Persist Configured applications
+	if err := appsConfig.Persists(); err != nil {
+		log.Fatalf("Failed to save configured applications: ", err)
+	}
+
+	// Load Balancer
+	var inprocBackendEndpoint string = "ipc://" + conf.Name + "-backend.ipc"
+	loadBalancer := load_balancer.NewLoadBalancer(loadBalancerFrontendEndpoint, "tcp://"+conf.LoadBalancerAddr, inprocBackendEndpoint)
+	defer loadBalancer.Close()
+	loadBalancer.Run()
 }
