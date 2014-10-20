@@ -7,7 +7,7 @@ import (
 	. "github.com/innotech/hydra/vendors/github.com/onsi/gomega"
 )
 
-var _ = FDescribe("PeerCluster", func() {
+var _ = Describe("PeerCluster", func() {
 	var (
 		initPeers   []Peer
 		peerCluster *PeerCluster
@@ -36,6 +36,7 @@ var _ = FDescribe("PeerCluster", func() {
 			Expect(peerCluster.Peers).To(HaveLen(2))
 			enabledPeers := peerCluster.GetEnabledPeers()
 			Expect(enabledPeers).To(HaveLen(1))
+			Expect(&peerCluster.Peers[1]).To(Equal(enabledPeers[0]))
 			Expect(enabledPeers[0].State).To(Equal(PeerStateEnabled))
 		})
 	})
@@ -46,14 +47,14 @@ var _ = FDescribe("PeerCluster", func() {
 				const nonexistentPeerAddr string = "98.245.153.113:4001"
 				foundPeer, err := peerCluster.GetPeerByAddr(nonexistentPeerAddr)
 				Expect(err).To(HaveOccurred())
-				Expect(foundPeer).To(Equal(Peer{}))
+				Expect(foundPeer).To(BeNil())
 			})
 		})
 		Context("when peer exists", func() {
 			It("should return the associated peer", func() {
 				foundPeer, err := peerCluster.GetPeerByAddr(peerCluster.Peers[1].Addr)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(foundPeer).To(Equal(peerCluster.Peers[1]))
+				Expect(foundPeer).To(Equal(&peerCluster.Peers[1]))
 			})
 		})
 	})

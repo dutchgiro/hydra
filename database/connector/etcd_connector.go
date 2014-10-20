@@ -25,9 +25,9 @@ type EtcdConnector struct {
 
 var e *EtcdConnector
 
-func SetEtcdConnector(etcd *etcd.Etcd) {
+func SetEtcdConnector(etcdService etcd.EtcdService) {
 	e = new(EtcdConnector)
-	e.etcd = etcd
+	e.etcd = etcdService.(*etcd.Etcd)
 }
 
 func GetEtcdConnector() *EtcdConnector {

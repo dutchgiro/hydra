@@ -37,28 +37,28 @@ func NewPeerClusterFromNodes(nodes Nodes) *PeerCluster {
 	}
 }
 
-func (p *PeerCluster) GetEnabledPeers() []Peer {
-	enabledPeers := []Peer{}
+func (p *PeerCluster) GetEnabledPeers() []*Peer {
+	enabledPeers := []*Peer{}
 	for _, peer := range p.Peers {
 		if peer.State == PeerStateEnabled {
-			enabledPeers = append(enabledPeers, peer)
+			enabledPeers = append(enabledPeers, &peer)
 		}
 	}
 	return enabledPeers
 }
 
-func (p *PeerCluster) GetPeerByAddr(addr string) (Peer, error) {
+func (p *PeerCluster) GetPeerByAddr(addr string) (*Peer, error) {
 	for _, peer := range p.Peers {
 		if peer.Addr == addr {
-			return peer, nil
+			return &peer, nil
 		}
 	}
-	return Peer{}, peerNotFoundError
+	return nil, peerNotFoundError
 }
 
-func (p *PeerCluster) GetPeerPosition(peerAddr string) (int, error) {
+func (p *PeerCluster) GetPeerPosition(addr string) (int, error) {
 	for i := 0; i < len(p.Peers); i++ {
-		if p.Peers[i].PeerAddr == peerAddr {
+		if p.Peers[i].Addr == addr {
 			return i, nil
 		}
 	}
@@ -93,11 +93,11 @@ func parseRawPeerCluster(nodes Nodes) []Peer {
 }
 
 func parseRawPeer(rawPeer *Node) Peer {
-	peer := Peer{PeerAddr: rawPeer.Key}
+	peer := Peer{Addr: rawPeer.Key}
 	for _, attr := range rawPeer.Nodes {
 		switch attr.Key {
-		case AddrKey:
-			peer.Addr = attr.Value
+		case PeerAddrKey:
+			peer.PeerAddr = attr.Value
 		case StateKey:
 			peer.State = attr.Value
 		}

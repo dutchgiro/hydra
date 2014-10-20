@@ -199,7 +199,7 @@ var _ = Describe("ClusterInspector", func() {
 				go func() {
 					clusterInspector.Run(ch)
 				}()
-				Expect(clusterInspector.PeerCluster.Peers).To(Equal(configPeers))
+				Expect(clusterInspector.PeerCluster.Peers).To(Equal([]Peer{}))
 				time.Sleep(time.Duration(200) * time.Millisecond)
 				peersMonitorChannel <- expectedPeers
 				Expect(clusterInspector.PeerCluster.Peers).To(Equal(expectedPeers))

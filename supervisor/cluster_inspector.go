@@ -1,5 +1,9 @@
 package supervisor
 
+// import (
+// 	"fmt"
+// )
+
 type ClusterAnalyzer interface {
 	Run(ch chan string)
 }
@@ -40,12 +44,12 @@ OuterLoop:
 			leader := c.searchForLeader()
 			if leader != nil {
 				foreignPeerCluster, err := c.getCluster(AddHttpProtocol((*leader).Addr))
-				if err == nil {
-					if c.shouldTryToJoinTheCluster((*leader).Addr, foreignPeerCluster) {
-						// TODO: Get PeerAddr from foreignPeerCluster data
-						ch <- AddHttpProtocol((*leader).PeerAddr)
-						break OuterLoop
-					}
+				if err != nil {
+					break
+				}
+				if c.shouldTryToJoinTheCluster((*leader).Addr, foreignPeerCluster) {
+					ch <- AddHttpProtocol((*leader).PeerAddr)
+					break OuterLoop
 				}
 			}
 			// TODO: Add sleep
@@ -91,6 +95,17 @@ func (c *ClusterInspector) getCluster(addr string) (*PeerCluster, error) {
 func (c *ClusterInspector) searchForLeader() *Peer {
 	for c.PeerCluster.Reset(); c.PeerCluster.HasNext(); {
 		peer, _ := c.PeerCluster.Next()
+		if peer.PeerAddr == "" {
+			peerCluster, err := c.getCluster(peer.Addr)
+			if err != nil {
+				continue
+			}
+			p, err := peerCluster.GetPeerByAddr(peer.Addr)
+			if err != nil || p.PeerAddr == "" {
+				continue
+			}
+			peer.PeerAddr = p.PeerAddr
+		}
 		addrURL := AddHttpProtocol(peer.Addr)
 		peerLeader, err := c.getLeader(addrURL)
 		if err == nil && peerLeader == AddHttpProtocol(peer.PeerAddr) {

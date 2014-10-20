@@ -30,7 +30,7 @@ func (e *EtcdManager) Start(config *etcd_config.Config) {
 	e.EtcdService = etcd.EtcdFactory.Build()
 	e.EtcdService.Start()
 	// TODO: Maybe change argument type to EtcdService interface
-	connector.SetEtcdConnector(e.EtcdService.(*etcd.Etcd))
+	connector.SetEtcdConnector(e.EtcdService)
 }
 
 func (e *EtcdManager) Stop() {

@@ -59,15 +59,15 @@ var _ = Describe("PeersMonitor", func() {
 			TTL:        3,
 			Nodes: []*Node{
 				&Node{
-					Key:        expectedCluster[0].PeerAddr,
+					Key:        expectedCluster[0].Addr,
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
 						&Node{
-							Key:           AddrKey,
-							Value:         expectedCluster[0].Addr,
+							Key:           PeerAddrKey,
+							Value:         expectedCluster[0].PeerAddr,
 							Dir:           false,
 							Expiration:    nil,
 							TTL:           3,
@@ -90,15 +90,15 @@ var _ = Describe("PeersMonitor", func() {
 					CreatedIndex:  modifiedIndex - 1,
 				},
 				&Node{
-					Key:        expectedCluster[1].PeerAddr,
+					Key:        expectedCluster[1].Addr,
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
 						&Node{
-							Key:           AddrKey,
-							Value:         expectedCluster[1].Addr,
+							Key:           PeerAddrKey,
+							Value:         expectedCluster[1].PeerAddr,
 							Dir:           false,
 							Expiration:    nil,
 							TTL:           3,
