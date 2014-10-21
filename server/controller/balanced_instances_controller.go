@@ -108,8 +108,15 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			clientParams, err := extractQueryParams(req)
+			if err != nil {
+				// TODO: move log to hydra logger
+				log.Println("Bad format for query parameters in client request")
+				http.Error(rw, err.Error(), http.StatusBadRequest)
+				return
+			}
 
-			response := b.sendZMQRequestToBalancer([]byte(appEntity.Id), [][]byte{balancers, instances})
+			response := b.sendZMQRequestToBalancer([]byte(appEntity.Id), [][]byte{balancers, instances, clientParams})
 			// TODO: process response
 
 			if len(response) > 0 {
@@ -136,4 +143,10 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 	rw.WriteHeader(http.StatusOK)
 	rw.Header().Set("Content-Type", "application/json")
 	rw.Write(jsonOutput)
+}
+
+func (b *BalancedInstancesController) extractQueryParams(req *http.Request) ([]byte, error) {
+	values := req.URL.Query()
+	values.(map[string][]string)
+	return json.Marshal(activeInstances)
 }
