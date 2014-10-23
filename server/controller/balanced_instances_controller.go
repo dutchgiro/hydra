@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 
 	. "github.com/innotech/hydra/load_balancer"
 	. "github.com/innotech/hydra/model/entity"
@@ -108,7 +109,7 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 				http.Error(rw, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			clientParams, err := extractQueryParams(req)
+			clientParams, err := b.extractQueryParams(req)
 			if err != nil {
 				// TODO: move log to hydra logger
 				log.Println("Bad format for query parameters in client request")
@@ -146,7 +147,6 @@ func (b *BalancedInstancesController) Get(rw http.ResponseWriter, req *http.Requ
 }
 
 func (b *BalancedInstancesController) extractQueryParams(req *http.Request) ([]byte, error) {
-	values := req.URL.Query()
-	values.(map[string][]string)
-	return json.Marshal(activeInstances)
+	var v url.Values = req.URL.Query()
+	return json.Marshal(map[string][]string(v))
 }
