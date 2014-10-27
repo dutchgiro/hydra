@@ -16,6 +16,7 @@ type EtcdRequester interface {
 	CompareAndSwap(key string, value string, ttl uint64,
 		prevValue string, prevIndex uint64, prevExist KeyExistence) (*Response, error)
 	Get(key string, sort, recursive bool) (*Response, error)
+	Set(key string, value string, ttl uint64) (*Response, error)
 	WithMachineAddr(machineAddr string) EtcdRequester
 	// Set(key string, value string, ttl uint64) (*Response, error)
 }
@@ -46,8 +47,8 @@ type Config struct {
 type EtcdClient struct {
 	machineAddr string
 
-	config      Config   `json:"config"`
-	cluster     *Cluster `json:"cluster"`
+	config Config `json:"config"`
+	// cluster     *Cluster `json:"cluster"`
 	httpClient  *http.Client
 	persistence io.Writer
 	cURLch      chan string
@@ -63,8 +64,8 @@ type EtcdClient struct {
 	// 	// Argument numReqs is the number of http.Requests that have been made so far.
 	// 	// Argument lastResp is the http.Responses from the last request.
 	// 	// Argument err is the reason of the failure.
-	CheckRetry func(cluster *Cluster, numReqs int,
-		lastResp http.Response, err error) error
+	// CheckRetry func(cluster *Cluster, numReqs int,
+	// 	lastResp http.Response, err error) error
 }
 
 // NewClient create a basic client that is configured to be used
@@ -78,8 +79,8 @@ func NewEtcdClient(machines []string) *EtcdClient {
 	}
 
 	client := &EtcdClient{
-		cluster: NewCluster(machines),
-		config:  config,
+		// cluster: NewCluster(machines),
+		config: config,
 	}
 
 	client.initHTTPClient()

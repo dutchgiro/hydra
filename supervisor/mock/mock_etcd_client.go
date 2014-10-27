@@ -63,6 +63,17 @@ func (_mr *_MockEtcdRequesterRecorder) Get(arg0, arg1, arg2 interface{}) *gomock
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Get", arg0, arg1, arg2)
 }
 
+func (_m *MockEtcdRequester) Set(key string, value string, ttl uint64) (*Response, error) {
+	ret := _m.ctrl.Call(_m, "Set", key, value, ttl)
+	ret0, _ := ret[0].(*Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (_mr *_MockEtcdRequesterRecorder) Set(arg0, arg1, arg2 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Set", arg0, arg1, arg2)
+}
+
 func (_m *MockEtcdRequester) WithMachineAddr(machineAddr string) EtcdRequester {
 	ret := _m.ctrl.Call(_m, "WithMachineAddr", machineAddr)
 	ret0, _ := ret[0].(EtcdRequester)

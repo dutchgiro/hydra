@@ -129,6 +129,7 @@ func (e *Etcd) Load() {
 	}
 	raftServer, err := raft.NewServer(e.Config.Name, e.Config.DataDir, raftTransporter, store, ps, "")
 	if err != nil {
+		log.Warn("TTT - 1")
 		log.Fatal(err)
 	}
 	raftServer.SetElectionTimeout(electionTimeout)
@@ -148,6 +149,7 @@ func (e *Etcd) Load() {
 }
 
 func (e *Etcd) Start() {
+	log.Warn("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
 	e.PeerServer.Start(e.Config.Snapshot, e.Config.Peers)
 
 	go func() {
@@ -166,20 +168,24 @@ func (e *Etcd) Start() {
 		log.Fatal("CORS:", err)
 	}
 	sHTTP := &ehttp.CORSHandler{e.PeerServer.HTTPHandler(), corsInfo}
+	log.Warn("PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP")
 	log.Fatal(http.Serve(e.PeerServerListener, sHTTP))
 }
 
 func (e *Etcd) Stop() {
 	var err error
-	err = e.EtcdServerListener.Close()
-	if err != nil {
-		log.Fatal(err.Error())
-	}
 	err = e.PeerServerListener.Close()
 	if err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("Unable to close etcd peer listener, it throws error: " + err.Error())
 	}
+	log.Warn("Closed peer server listener")
+	err = e.EtcdServerListener.Close()
+	if err != nil {
+		log.Fatal("Unable to close etcd server listener, it throws error: " + err.Error())
+	}
+	log.Warn("Closed etcd server listener")
 	if err = os.RemoveAll(e.Config.DataDir); err != nil {
-		log.Fatal(err.Error())
+		log.Fatal("Unable to remove data directory, it throws error: " + err.Error())
 	}
+	log.Warn("removed data directory")
 }

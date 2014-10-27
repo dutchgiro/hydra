@@ -1,8 +1,10 @@
 package supervisor
 
-// import (
-// 	"fmt"
-// )
+import (
+	"github.com/innotech/hydra/log"
+
+	"time"
+)
 
 type ClusterAnalyzer interface {
 	Run(ch chan string)
@@ -24,10 +26,10 @@ func NewClusterInspector(ownAddr string, knownPeers []string) *ClusterInspector 
 	}
 	return &ClusterInspector{
 		configPeers:  []string{},
-		EtcdClient:   NewEtcdClient([]string{ownAddr}),
+		EtcdClient:   NewEtcdClient([]string{AddHttpProtocol(ownAddr)}),
 		ownAddr:      ownAddr,
 		PeerCluster:  NewPeerCluster(peers),
-		PeersMonitor: NewPeersMonitor(NewEtcdClient([]string{ownAddr}).WithMachineAddr(ownAddr)),
+		PeersMonitor: NewPeersMonitor(NewEtcdClient([]string{AddHttpProtocol(ownAddr)}).WithMachineAddr(AddHttpProtocol(ownAddr))),
 	}
 }
 
@@ -39,8 +41,10 @@ OuterLoop:
 	for {
 		select {
 		case newPeers = <-peersMonitorChannel:
+			log.Debug("Peer monitor found a change in cluster")
 			c.PeerCluster.Peers = newPeers
 		default:
+			log.Debug("Search for leader")
 			leader := c.searchForLeader()
 			if leader != nil {
 				foreignPeerCluster, err := c.getCluster(AddHttpProtocol((*leader).Addr))
@@ -52,7 +56,8 @@ OuterLoop:
 					break OuterLoop
 				}
 			}
-			// TODO: Add sleep
+			// TODO: configure sleep
+			time.Sleep(time.Duration(1) * time.Second)
 		}
 	}
 }
@@ -84,9 +89,11 @@ func (c *ClusterInspector) iHavePriorityOverCluster(foreignLeaderAddr string, fo
 }
 
 func (c *ClusterInspector) getCluster(addr string) (*PeerCluster, error) {
+	log.Debug("Call to getCluster with address: " + addr)
 	c.EtcdClient.WithMachineAddr(addr)
 	res, err := c.EtcdClient.Get(ClusterKey, true, true)
 	if err != nil {
+		log.Debug("Unable to get Cluster from peer: " + addr)
 		return nil, err
 	}
 	return NewPeerClusterFromNodes(res.Node.Nodes), nil
@@ -95,18 +102,23 @@ func (c *ClusterInspector) getCluster(addr string) (*PeerCluster, error) {
 func (c *ClusterInspector) searchForLeader() *Peer {
 	for c.PeerCluster.Reset(); c.PeerCluster.HasNext(); {
 		peer, _ := c.PeerCluster.Next()
+		// TODO: Test
+		if peer.Addr == c.ownAddr {
+			continue
+		}
+		addrURL := AddHttpProtocol(peer.Addr)
 		if peer.PeerAddr == "" {
-			peerCluster, err := c.getCluster(peer.Addr)
+			peerCluster, err := c.getCluster(addrURL)
 			if err != nil {
 				continue
 			}
 			p, err := peerCluster.GetPeerByAddr(peer.Addr)
 			if err != nil || p.PeerAddr == "" {
+				log.Debugf("Invalid peer in cluster: %#v", peerCluster)
 				continue
 			}
 			peer.PeerAddr = p.PeerAddr
 		}
-		addrURL := AddHttpProtocol(peer.Addr)
 		peerLeader, err := c.getLeader(addrURL)
 		if err == nil && peerLeader == AddHttpProtocol(peer.PeerAddr) {
 			return &peer
@@ -116,9 +128,12 @@ func (c *ClusterInspector) searchForLeader() *Peer {
 }
 
 func (c *ClusterInspector) getLeader(addr string) (string, error) {
+	log.Debug("Call to getLeader with address: " + addr)
+	log.Info("Call to getLeader with address: " + addr)
 	c.EtcdClient.WithMachineAddr(addr)
 	res, err := c.EtcdClient.BaseGet(LeaderKey)
 	if err != nil {
+		log.Debug("Unable to get leader from peer: " + addr)
 		return "", err
 	}
 	leader := string(res.Body)

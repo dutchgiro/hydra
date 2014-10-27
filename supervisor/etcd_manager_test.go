@@ -24,7 +24,7 @@ func existsPath(path string) (bool, error) {
 	return false, err
 }
 
-var _ = FDescribe("EtcdManager", func() {
+var _ = PDescribe("EtcdManager", func() {
 	var (
 		mockCtrl        *gomock.Controller
 		mockEtcdFactory *mock.MockEtcdBuilder

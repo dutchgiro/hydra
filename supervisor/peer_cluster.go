@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"errors"
+	"path"
 )
 
 type Peer struct {
@@ -93,9 +94,12 @@ func parseRawPeerCluster(nodes Nodes) []Peer {
 }
 
 func parseRawPeer(rawPeer *Node) Peer {
-	peer := Peer{Addr: rawPeer.Key}
+	_, addr := path.Split(rawPeer.Key)
+	peer := Peer{Addr: addr}
+	var key string
 	for _, attr := range rawPeer.Nodes {
-		switch attr.Key {
+		_, key = path.Split(attr.Key)
+		switch key {
 		case PeerAddrKey:
 			peer.PeerAddr = attr.Value
 		case StateKey:

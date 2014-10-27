@@ -36,6 +36,10 @@ var _ = Describe("PeersMonitor", func() {
 		mockCtrl.Finish()
 	})
 
+	prependSlash := func(s string) string {
+		return "/" + s
+	}
+
 	expectedCluster := []Peer{
 		Peer{
 			Addr:     "98.245.153.111:4001",
@@ -52,21 +56,21 @@ var _ = Describe("PeersMonitor", func() {
 	successResponse := &Response{
 		Action: "",
 		Node: &Node{
-			Key:        ClusterKey,
+			Key:        prependSlash(ClusterKey),
 			Value:      "",
 			Dir:        true,
 			Expiration: nil,
 			TTL:        3,
 			Nodes: []*Node{
 				&Node{
-					Key:        expectedCluster[0].Addr,
+					Key:        prependSlash(ClusterKey) + prependSlash(expectedCluster[0].Addr),
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
 						&Node{
-							Key:           PeerAddrKey,
+							Key:           prependSlash(ClusterKey) + prependSlash(expectedCluster[0].Addr) + prependSlash(PeerAddrKey),
 							Value:         expectedCluster[0].PeerAddr,
 							Dir:           false,
 							Expiration:    nil,
@@ -76,7 +80,7 @@ var _ = Describe("PeersMonitor", func() {
 							CreatedIndex:  modifiedIndex - 1,
 						},
 						&Node{
-							Key:           StateKey,
+							Key:           prependSlash(ClusterKey) + prependSlash(expectedCluster[0].Addr) + prependSlash(StateKey),
 							Value:         expectedCluster[0].State,
 							Dir:           false,
 							Expiration:    nil,
@@ -90,14 +94,14 @@ var _ = Describe("PeersMonitor", func() {
 					CreatedIndex:  modifiedIndex - 1,
 				},
 				&Node{
-					Key:        expectedCluster[1].Addr,
+					Key:        prependSlash(ClusterKey) + prependSlash(expectedCluster[1].Addr),
 					Value:      "",
 					Dir:        true,
 					Expiration: nil,
 					TTL:        3,
 					Nodes: []*Node{
 						&Node{
-							Key:           PeerAddrKey,
+							Key:           prependSlash(ClusterKey) + prependSlash(expectedCluster[1].Addr) + prependSlash(PeerAddrKey),
 							Value:         expectedCluster[1].PeerAddr,
 							Dir:           false,
 							Expiration:    nil,
@@ -107,7 +111,7 @@ var _ = Describe("PeersMonitor", func() {
 							CreatedIndex:  modifiedIndex - 1,
 						},
 						&Node{
-							Key:           StateKey,
+							Key:           prependSlash(ClusterKey) + prependSlash(expectedCluster[1].Addr) + prependSlash(StateKey),
 							Value:         expectedCluster[1].State,
 							Dir:           false,
 							Expiration:    nil,
@@ -164,9 +168,12 @@ var _ = Describe("PeersMonitor", func() {
 		Context("when a change is detected in the cluster", func() {
 			It("should emit the new cluster", func() {
 				peersMonitor.Peers = expectedCluster[:1]
-				mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+				c1 := mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
 					Return(successResponse, nil).
 					Times(1)
+				mockEtcdClient.EXPECT().Get(gomock.Eq("cluster"), gomock.Eq(true), gomock.Eq(true)).
+					Return(successResponse, nil).
+					AnyTimes().After(c1)
 
 				go func() {
 					peersMonitor.Run(ch)

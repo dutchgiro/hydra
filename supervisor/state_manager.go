@@ -1,6 +1,8 @@
 package supervisor
 
 import (
+	"github.com/innotech/hydra/log"
+
 	"time"
 )
 
@@ -26,25 +28,33 @@ const (
 	Running
 )
 
+const (
+	PersistentTTL uint64 = 0
+)
+
 // TODO: stateManager not exporting
 type StateManager struct {
 	DurationBetweenPublicationsState time.Duration
 	etcdClient                       EtcdRequester
 	modifiedIndexKeyState            uint64
 	NumOfSetStateRetries             uint
+	PeerAddr                         string
+	PeerAddrKey                      string
 	PeerStateKey                     string
 	PeerStateKeyTTL                  uint64
 	state                            StateControllerState
 }
 
 func NewStateManager(durationBetweenPublicationsState time.Duration, etcdClient EtcdRequester,
-	peerAddr string, stateKeyTTL uint64) *StateManager {
+	addr string, peerAddr string, stateKeyTTL uint64) *StateManager {
 	return &StateManager{
 		DurationBetweenPublicationsState: durationBetweenPublicationsState,
 		etcdClient:                       etcdClient,
 		modifiedIndexKeyState:            0,
 		NumOfSetStateRetries:             DefaultMaxAttemptsToSetState,
-		PeerStateKey:                     ClusterKey + "/" + peerAddr + "/" + StateKey,
+		PeerAddr:                         peerAddr,
+		PeerAddrKey:                      ClusterKey + "/" + addr + "/" + PeerAddrKey,
+		PeerStateKey:                     ClusterKey + "/" + addr + "/" + StateKey,
 		PeerStateKeyTTL:                  stateKeyTTL,
 		state:                            Stopped,
 	}
@@ -56,14 +66,20 @@ func (s *StateManager) GetState() StateControllerState {
 
 func (s *StateManager) Run(ch chan StateControllerState) {
 	s.state = Running
+	_, err := s.etcdClient.Set(s.PeerAddrKey, s.PeerAddr, PersistentTTL)
+	if err != nil {
+		log.Warn("Unable to set peer address in cluster key")
+	}
+	log.Debug("Peer address was set with value: " + s.PeerAddr)
 OuterLoop:
 	for {
-		err := s.setNodeState()
+		err := s.setPeerState()
 		if err != nil {
 			s.state = Stopped
 			ch <- s.state
 			break OuterLoop
 		}
+		log.Debug("Peer state " + PeerStateEnabled + " posted successfully")
 		time.Sleep(s.DurationBetweenPublicationsState)
 	}
 }
@@ -76,7 +92,7 @@ func (s *StateManager) getStateKeyExistence() (stateKeyExistence KeyExistence) {
 	return
 }
 
-func (s *StateManager) setNodeState() error {
+func (s *StateManager) setPeerState() error {
 	var res *Response
 	var err error = nil
 

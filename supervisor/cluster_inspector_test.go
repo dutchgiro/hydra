@@ -246,7 +246,7 @@ var _ = Describe("ClusterInspector", func() {
 				go func() {
 					clusterInspector.Run(ch)
 				}()
-				time.Sleep(time.Duration(1) * time.Second)
+				time.Sleep(time.Duration(2) * time.Second)
 			})
 		})
 		Context("when find a foreign peer to connect", func() {
