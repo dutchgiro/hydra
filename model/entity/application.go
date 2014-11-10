@@ -2,6 +2,7 @@ package entity
 
 import (
 	"errors"
+	"strconv"
 )
 
 type Application struct {
@@ -63,8 +64,12 @@ func extractBalancers(data map[string]interface{}) ([]Balancer, error) {
 }
 
 func generateBalancers(balancers map[string]interface{}) ([]Balancer, error) {
-	var balancerEntities []Balancer = make([]Balancer, 0)
-	for _, data := range balancers {
+	balancerEntities := make([]Balancer, len(balancers), len(balancers))
+	for i, data := range balancers {
+		index, err := strconv.Atoi(i)
+		if err != nil {
+			return nil, err
+		}
 		var id string = data.(map[string]interface{})["worker"].(string)
 		var workerData map[string]interface{} = make(map[string]interface{})
 		for key, value := range data.(map[string]interface{}) {
@@ -76,7 +81,7 @@ func generateBalancers(balancers map[string]interface{}) ([]Balancer, error) {
 		if err != nil {
 			return nil, err
 		}
-		balancerEntities = append(balancerEntities, balancer)
+		balancerEntities[index] = balancer
 	}
 	return balancerEntities, nil
 }
