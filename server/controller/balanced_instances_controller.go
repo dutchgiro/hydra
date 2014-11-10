@@ -13,14 +13,16 @@ import (
 
 type BalancedInstancesController struct {
 	BasicController
+	client              Requester
 	loadBalancerAddress string
 	requestTimeout      int
 }
 
-func NewBalancedInstancesController(loadBalancerAddresss string, requestTimeout int) (*BalancedInstancesController, error) {
+func NewBalancedInstancesController(loadBalancerAddress string, requestTimeout int) (*BalancedInstancesController, error) {
 	var b = new(BalancedInstancesController)
+	b.client = NewClient(loadBalancerAddress, requestTimeout)
 	b.basePath = "/apps"
-	b.loadBalancerAddress = loadBalancerAddresss
+	b.loadBalancerAddress = loadBalancerAddress
 	b.requestTimeout = requestTimeout
 	var err error
 	b.PathVariables, err = extractPathVariables(b.basePath)
@@ -33,11 +35,7 @@ func NewBalancedInstancesController(loadBalancerAddresss string, requestTimeout 
 }
 
 func (b *BalancedInstancesController) sendZMQRequestToBalancer(app []byte, data [][]byte) (reply [][]byte) {
-	client := NewClient(b.loadBalancerAddress, b.requestTimeout)
-	defer client.Close()
-
-	reply = client.Send(app, data)
-
+	reply = b.client.Send(app, data)
 	return
 }
 

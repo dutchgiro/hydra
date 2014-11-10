@@ -113,10 +113,12 @@ func (self *loadBalancer) deleteWorker(worker *lbWorker, disconnect bool) {
 
 // decomposeMapOfInstancesMsg extracts the uris from nested array of instances
 func (self *loadBalancer) decomposeMapOfInstancesMsg(msg []byte) []byte {
+	log.Debug("--- decomposeMapOfInstancesMsg")
 	var levels []interface{}
 	if err := json.Unmarshal(msg, &levels); err != nil {
-		// TODO: Send an error
+		log.Warn("Bad JSON format")
 	}
+	log.Debug("--- levels", levels)
 	var computedInstances []interface{}
 	var processMapLevels func([]interface{})
 	processMapLevels = func(levels []interface{}) {
@@ -145,26 +147,32 @@ func (self *loadBalancer) decomposeMapOfInstancesMsg(msg []byte) []byte {
 		}
 	}
 
+	log.Debug("--- sortedInstanceUris", sortedInstanceUris)
 	uris, err := json.Marshal(sortedInstanceUris)
 	if err != nil {
-		// TODO: Send an error
+		log.Warn("Bad JSON format")
 	}
 	return uris
 }
 
 // Dispatch chains advancing a shackle
 func (self *loadBalancer) advanceShackle(chain lbChain) {
+	log.Debug("--- advanceShackle")
 	elem := chain.shackles.Pop()
 	if elem == nil {
+		log.Debug("--- Decompose")
 		// Decompose
 		instanceUrisMsg := self.decomposeMapOfInstancesMsg(chain.msg)
+		log.Debug("--- instanceUrisMsg:", instanceUrisMsg)
 		msg := [][]byte{[]byte(chain.client), nil, instanceUrisMsg}
 		self.frontend.SendMultipart(msg, 0)
 		return
 	}
+	log.Debug("--- NO Decompose")
 	shackle, _ := elem.Value.(lbShackle)
 	args, _ := json.Marshal(shackle.serviceArgs)
 	msg := [][]byte{[]byte(chain.client), nil, chain.msg, args}
+	log.Debug("--- SENDING TO:", shackle.serviceName)
 	self.dispatch(self.requireService(shackle.serviceName), msg)
 }
 
@@ -207,6 +215,7 @@ func (self *loadBalancer) dispatch(service *lbService, msg [][]byte) {
 
 // Register chain from new client request
 func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
+	// log.Debug("--- registerChain")
 	var services []Balancer
 	if err := json.Unmarshal(msg[1], &services); err != nil {
 		panic(err)
@@ -225,6 +234,7 @@ func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
 			serviceArgs: args,
 		})
 	}
+	// log.Debug("--- CHAIN:", chain)
 	self.chains[string(client)] = chain
 }
 
@@ -292,6 +302,7 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 	case SIGNAL_REPLY:
 		log.Debug("SIGNAL_REPLY")
 		if workerReady {
+			log.Debug("--- workerReady")
 			//  Remove & save client return envelope and insert the
 			//  protocol header and service name, then rewrap envelope.
 			client := msg[0]
@@ -300,6 +311,7 @@ func (self *loadBalancer) processWorker(sender []byte, msg [][]byte) {
 			self.advanceShackle(chain)
 			self.workerWaiting(worker)
 		} else {
+			log.Debug("--- NO workerReady")
 			self.deleteWorker(worker, true)
 		}
 	case SIGNAL_HEARTBEAT:
