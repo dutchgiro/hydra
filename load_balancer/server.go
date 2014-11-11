@@ -190,7 +190,8 @@ func (self *loadBalancer) getFirstLevelOfWaitingWorkers(service *lbService) *ZLi
 // Dispatch requests to waiting workers as possible
 func (self *loadBalancer) dispatch(service *lbService, msg [][]byte) {
 	if service == nil {
-		log.Fatal("Nil service")
+		log.Warn("Nil service")
+		return
 	}
 	// Queue message if any
 	if len(msg) != 0 {
@@ -242,7 +243,8 @@ func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
 func (self *loadBalancer) processClient(client []byte, msg [][]byte) {
 	// Application + Services + Instances
 	if len(msg) < 3 {
-		log.Fatal("Invalid message from client sender")
+		log.Warn("Invalid message from client sender")
+		return
 	}
 	// Register chain
 	self.registerChain(client, msg)
