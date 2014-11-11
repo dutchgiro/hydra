@@ -2,7 +2,6 @@ package load_balancer
 
 import (
 	"log"
-	"runtime"
 	"time"
 
 	zmq "github.com/innotech/hydra/vendors/github.com/alecthomas/gozmq"
@@ -30,7 +29,6 @@ func NewClient(server string, requestTimeout int) *client {
 		requestTimeout: time.Duration(requestTimeout) * time.Millisecond,
 	}
 	self.connect()
-	runtime.SetFinalizer(self, closeClient)
 	return self
 }
 
@@ -39,24 +37,12 @@ func (self *client) connect() {
 		self.socket.Close()
 	}
 
-	var errSocket error
-	self.socket, errSocket = self.context.NewSocket(zmq.REQ)
-	if errSocket != nil {
-		log.Fatal(errSocket.Error())
-	}
+	self.socket, _ = self.context.NewSocket(zmq.REQ)
 	self.socket.SetLinger(0)
 	self.socket.Connect(self.server)
 	if err := self.socket.SetRcvTimeout(self.requestTimeout); err != nil {
 		log.Println(err)
 	}
-}
-
-// Close socket and context connections
-func closeClient(self *client) {
-	if self.socket != nil {
-		self.socket.Close()
-	}
-	self.context.Close()
 }
 
 // Close socket and context connections
@@ -72,9 +58,9 @@ func (self *client) Send(service []byte, request [][]byte) (reply [][]byte) {
 	frame := append([][]byte{service}, request...)
 
 	self.socket.SendMultipart(frame, zmq.NOBLOCK)
-	msg, err := self.socket.RecvMultipart(0)
+	msg, _ := self.socket.RecvMultipart(0)
 
-	if err != nil || len(msg) < 1 {
+	if len(msg) < 1 {
 		reply = [][]byte{}
 	} else {
 		reply = msg
