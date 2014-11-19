@@ -35,10 +35,11 @@ type lbWorker struct {
 }
 
 type lbChain struct {
-	app      string
-	client   string
-	msg      []byte
-	shackles *ZList
+	app          string
+	client       string
+	clientParams []byte
+	msg          []byte
+	shackles     *ZList
 }
 
 type lbShackle struct {
@@ -164,7 +165,7 @@ func (self *loadBalancer) advanceShackle(chain lbChain) {
 	}
 	shackle, _ := elem.Value.(lbShackle)
 	args, _ := json.Marshal(shackle.serviceArgs)
-	msg := [][]byte{[]byte(chain.client), nil, chain.msg, args}
+	msg := [][]byte{[]byte(chain.client), nil, chain.msg, chain.clientParams, args}
 	self.dispatch(self.requireService(shackle.serviceName), msg)
 }
 
@@ -212,10 +213,11 @@ func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
 		panic(err)
 	}
 	chain := lbChain{
-		app:      string(msg[0]),
-		client:   string(client),
-		msg:      msg[2],
-		shackles: NewList(),
+		app:          string(msg[0]),
+		client:       string(client),
+		clientParams: msg[3],
+		msg:          msg[2],
+		shackles:     NewList(),
 	}
 	for _, service := range services {
 		args := service.Args
@@ -230,8 +232,8 @@ func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
 
 // Process a request coming from a client.
 func (self *loadBalancer) processClient(client []byte, msg [][]byte) {
-	// Application + Services + Instances
-	if len(msg) < 3 {
+	// Application + Services + Instances + Query params of client request
+	if len(msg) < 4 {
 		log.Fatal("Invalid message from client sender")
 	}
 	// Register chain
