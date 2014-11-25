@@ -1,24 +1,389 @@
 package load_balancer
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"reflect"
-	"strconv"
-	"time"
-
-	zmq "github.com/innotech/hydra/vendors/github.com/alecthomas/gozmq"
+	zmq "github.com/pebbe/zmq4"
 
 	"github.com/innotech/hydra/log"
 	. "github.com/innotech/hydra/model/entity"
 )
 
+// TODO: Maybe move to init.go
 const (
+	// TODO: Maybe remove
 	INTERNAL_SERVICE_PREFIX = "isb."
-	// Merge all heartbeat
-	HEARTBEAT_INTERVAL = 2500 * time.Millisecond
+
+	HEARTBEAT_LIVENESS = 3                       //  3-5 is reasonable
+	HEARTBEAT_INTERVAL = 2500 * time.Millisecond //  msecs
 	HEARTBEAT_EXPIRY   = HEARTBEAT_INTERVAL * HEARTBEAT_LIVENESS
 )
+
+type Broker struct {
+	context               *zmq.Context //  Context for broker
+	frontendEndpoint      string
+	frontendSocket        *zmq.Socket //  Socket for clients
+	inprocBackendEndpoint string
+	inprocBackendSocket   *zmq.Socket //  Socket for local workers
+	tcpBackendEndpoint    string
+	tcpBackendSocket      *zmq.Socket         //  Socket for external workers
+	verbose               bool                //  Print activity to stdout
+	endpoint              string              //  Broker binds to this endpoint
+	services              map[string]*Service //  Hash of known services
+	workers               map[string]*Worker  //  Hash of known workers
+	waiting               []*Worker           //  List of waiting workers
+	heartbeat_at          time.Time           //  When to send HEARTBEAT
+}
+
+//  The service class defines a single service instance:
+
+type Service struct {
+	broker   *Broker    //  Broker instance
+	name     string     //  Service name
+	requests [][]string //  List of client requests
+	// waiting  []*Worker  //  List of waiting workers
+	waiting []*ZList // Lists of waiting workers sorted by priority level
+}
+
+//  The worker class defines a single worker, idle or active:
+
+type Worker struct {
+	broker    *Broker   //  Broker instance
+	id_string string    //  Identity of worker as string
+	identity  string    //  Identity frame for routing
+	service   *Service  //  Owning service, if known
+	expiry    time.Time //  Expires at unless heartbeat
+}
+
+type Chain struct {
+	app          string
+	client       string
+	clientParams []byte
+	msg          []byte
+	shackles     *ZList
+}
+
+type Shackle struct {
+	serviceName string
+	serviceArgs map[string]interface{}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+
+type lbWorker struct {
+	identity      string    // UUID Identity of worker
+	address       []byte    // Address to route to
+	expiry        time.Time // Expires at this point, unless heartbeat
+	priorityLevel int       // Sets the priority level of a worker (level 0 is reserved for workers deployed on the same host)
+	// priority int        // Sets the priority of a worker within their priority level
+	service *lbService // Owning service, if known
+}
+
+// TODO: if all err throw fatal remove err from return values
+func NewBroker(frontendEndpoint, tcpBackendEndpoint, inprocBackendEndpoint string) (broker *Broker, err error) {
+	broker = &Broker{
+		frontendEndpoint:      frontendEndpoint,
+		inprocBackendEndpoint: inprocBackendEndpoint,
+		tcpBackendEndpoint:    tcpBackendEndpoint,
+		// chains:        make(map[string]lbChain),
+		services: make(map[string]*Service),
+		// services:      make(map[string]*lbService),
+		workers: make(map[string]*Worker),
+		// workers:       make(map[string]*lbWorker),
+		waiting: make([]*Worker, 0),
+		// waiting:       NewList(),
+		heartbeat_at: time.Now().Add(HEARTBEAT_INTERVAL),
+	}
+	broker.context, err = zmq.NewContext()
+	if err != nil {
+		log.Fatal("LoadBalancer broker ConnectToBroker() creating context failed")
+	}
+
+	// Define inproc socket to talk with HTTP CLient API
+	broker.frontendSocket, err = zmq.NewSocket(zmq.ROUTER)
+	if err != nil {
+		log.Fatal("LoadBalancer broker ConnectToBroker() creating frontend socket failed")
+	}
+	broker.frontendSocket.SetRcvhwm(500000)
+	// TODO: Maybe set linger to 0
+
+	// Define inproc socket to talk with local Workers
+	broker.inprocBackendSocket, err = zmq.NewSocket(zmq.ROUTER)
+	if err != nil {
+		log.Fatal("LoadBalancer client ConnectToBroker() creating inproc backend socket failed")
+	}
+	broker.inprocBackendSocket.SetRcvhwm(500000)
+	// TODO: Maybe set linger to 0
+
+	// Define tcp socket to talk with external Workers
+	broker.tcpBackendSocket, err = zmq.NewSocket(zmq.ROUTER)
+	if err != nil {
+		log.Fatal("LoadBalancer client ConnectToBroker() creating tcp backend socket failed")
+	}
+	broker.tcpBackendSocket.SetRcvhwm(500000)
+	// TODO: Maybe set linger to 0
+
+	runtime.SetFinalizer(broker, (*Broker).Close)
+	return
+}
+
+// TODO: remake
+func (b *Broker) Close() (err error) {
+	if b.frontendSocket != nil {
+		err = b.frontendSocket.Close()
+		b.frontendSocket = nil
+	}
+	if b.inprocBackendSocket != nil {
+		err = b.inprocBackendSocket.Close()
+		b.inprocBackendSocket = nil
+	}
+	if b.tcpBackendSocket != nil {
+		err = b.tcpBackendSocket.Close()
+		b.tcpBackendSocket = nil
+	}
+	if b.context != nil {
+		err = b.context.Term()
+		b.context = nil
+	}
+	return
+}
+
+// Register chain from new client request
+func (self *loadBalancer) registerChain(client []byte, msg [][]byte) {
+	// TODO: change Balancer type to Worker Type or Service Type
+	var services []Balancer
+	if err := json.Unmarshal(msg[1], &services); err != nil {
+		panic(err)
+	}
+
+	// TODO: change lbChain type to Chain type
+	chain := lbChain{
+		app:          string(msg[0]),
+		client:       string(client),
+		clientParams: msg[3],
+		msg:          msg[2],
+		shackles:     NewList(),
+	}
+	for _, service := range services {
+		args := service.Args
+		args["appId"] = chain.app
+		chain.shackles.PushBack(lbShackle{
+			serviceName: service.Id,
+			serviceArgs: args,
+		})
+	}
+	self.chains[string(client)] = chain
+}
+
+// Dispatch chains advancing a shackle
+func (self *loadBalancer) advanceShackle(chain lbChain) {
+	elem := chain.shackles.Pop()
+	if elem == nil {
+		// Decompose
+		instanceUrisMsg := self.decomposeMapOfInstancesMsg(chain.msg)
+		msg := [][]byte{[]byte(chain.client), nil, instanceUrisMsg}
+		self.frontend.SendMultipart(msg, 0)
+		return
+	}
+	shackle, _ := elem.Value.(lbShackle)
+	args, _ := json.Marshal(shackle.serviceArgs)
+	msg := [][]byte{[]byte(chain.client), nil, chain.msg, chain.clientParams, args}
+	self.dispatch(self.requireService(shackle.serviceName), msg)
+}
+
+// Process a request coming from a client.
+func (b *Broker) processClientMsg(client []byte, msg [][]byte) {
+	// Application + Services + Instances + Query params of client request
+	if len(msg) < 4 {
+		log.Warn("LoadBalancer broker invalid message received from client sender")
+	}
+
+	self.registerChain(client, msg)
+	// Start chain of requests
+	self.advanceShackle(self.chains[string(client)])
+}
+
+//  processWorkerMsg method processes one READY, REPLY, HEARTBEAT or
+//  DISCONNECT message sent to the broker by a worker:
+// func (broker *Broker) WorkerMsg(sender string, msg []string) {
+func (broker *Broker) processWorkerMsg(sender []byte, msg [][]byte) {
+	//  At least, command
+	if len(msg) == 0 {
+		log.Warn("LoadBalancer broker process invalid message from Worker, this doesn't contain command")
+		return
+	}
+
+	command, msg := msg[0], msg[1:]
+	identity := hex.EncodeToString(sender)
+	worker, workerReady := self.workers[identity]
+	if !workerReady {
+		worker = &lbWorker{
+			identity: identity,
+			address:  sender,
+			expiry:   time.Now().Add(HEARTBEAT_EXPIRY),
+		}
+		self.workers[identity] = worker
+		log.Debugf("Worker: %#v", worker)
+	}
+
+	///////////////////////////////////////////////////////////////////////
+
+	//  At least, command
+	if len(msg) == 0 {
+		panic("len(msg) == 0")
+	}
+
+	command, msg := popStr(msg)
+	id_string := fmt.Sprintf("%q", sender)
+	_, worker_ready := broker.workers[id_string]
+	worker := broker.WorkerRequire(sender)
+
+	switch command {
+	case MDPW_READY:
+		if worker_ready { //  Not first command in session
+			worker.Delete(true)
+		} else if len(sender) >= 4 /*  Reserved service name */ && sender[:4] == "mmi." {
+			worker.Delete(true)
+		} else {
+			//  Attach worker to service and mark as idle
+			worker.service = broker.ServiceRequire(msg[0])
+			worker.Waiting()
+		}
+	case MDPW_REPLY:
+		if worker_ready {
+			//  Remove & save client return envelope and insert the
+			//  protocol header and service name, then rewrap envelope.
+			client, msg := unwrap(msg)
+			broker.socket.SendMessage(client, "", MDPC_CLIENT, worker.service.name, msg)
+			worker.Waiting()
+		} else {
+			worker.Delete(true)
+		}
+	case MDPW_HEARTBEAT:
+		if worker_ready {
+			worker.expiry = time.Now().Add(HEARTBEAT_EXPIRY)
+		} else {
+			worker.Delete(true)
+		}
+	case MDPW_DISCONNECT:
+		worker.Delete(false)
+	default:
+		log.Printf("E: invalid input message %q\n", msg)
+	}
+}
+
+// Run executes the working loop
+func (b *Broker) Run() {
+	var er error
+	// Bind frontend socket
+	err = b.frontendSocket.Bind(b.frontendEndpoint)
+	if err != nil {
+		log.Fatal("LoadBalancer broker failed to bind frontend socket at", b.frontendEndpoint)
+	}
+	log.Info("LoadBalancer broker frontend socket is active at", b.frontendEndpoint)
+
+	// Bind inproc backend socket
+	err = b.inprocBackendSocket.Bind(b.inprocBackendEndpoint)
+	if err != nil {
+		log.Fatal("LoadBalancer broker failed to bind frontend socket at", b.inprocBackendEndpoint)
+	}
+	log.Info("LoadBalancer broker inproc backend socket is active at", b.inprocBackendEndpoint)
+
+	// Bind tcp backend socket
+	err = b.tcpBackendSocket.Bind(b.tcpBackendEndpoint)
+	if err != nil {
+		log.Fatal("LoadBalancer broker failed to bind frontend socket at", b.tcpBackendEndpoint)
+	}
+	log.Info("LoadBalancer broker tcp backend socket is active at", b.tcpBackendEndpoint)
+
+	poller := zmq.NewPoller()
+	poller.Add(b.frontendSocket, zmq.POLLIN)
+	poller.Add(b.inprocBackendSocket, zmq.POLLIN)
+	poller.Add(b.tcpBackendSocket, zmq.POLLIN)
+
+	for {
+		polled, err := poller.Poll(HEARTBEAT_INTERVAL)
+		if err != nil {
+			log.Fatal("LoadBalancer broker non items for polling")
+		}
+
+		for _, item := range polled {
+			switch socket := item.Socket; socket {
+			case b.frontendSocket:
+				msg, err := b.frontendSocket.RecvMessageBytes(0)
+				if err != nil {
+					// TODO
+					// break LOOP
+				}
+				log.Printf("LoadBalancer broker frontend socket received message: %q\n", msg)
+
+				// TODO: check msg parts
+				requestId := msg[0]
+				msg = msg[2:]
+				b.processClient(requestId, msg)
+			case b.inprocBackendSocket:
+				msg, err := b.inprocBackendSocket.RecvMessageBytes(0)
+				if err != nil {
+					// TODO
+					// break LOOP
+				}
+				log.Printf("LoadBalancer broker inproc backend socket received message: %q\n", msg)
+
+				// TODO: check msg parts
+				sender := msg[0]
+				msg = msg[2:]
+				b.processWorker(sender, msg)
+			case b.tcpBackendSocket:
+				msg, err := b.tcpBackendSocket.RecvMessageBytes(0)
+				if err != nil {
+					// TODO
+					// break LOOP
+				}
+				log.Printf("LoadBalancer broker tcp backend socket received message: %q\n", msg)
+
+				// TODO: check msg parts
+				sender := msg[0]
+				msg = msg[2:]
+				b.processWorker(sender, msg)
+			}
+		}
+
+		// TODO
+		// Old
+		// if self.heartbeatAt.Before(time.Now()) {
+		// 	self.purgeWorkers()
+		// 	for elem := self.waiting.Front(); elem != nil; elem = elem.Next() {
+		// 		worker, _ := elem.Value.(*lbWorker)
+		// 		self.sendToWorker(worker, SIGNAL_HEARTBEAT, nil, nil)
+		// 	}
+		// 	self.heartbeatAt = time.Now().Add(HEARTBEAT_INTERVAL)
+		// }
+
+		//  Disconnect and delete any expired workers
+		//  Send heartbeats to idle workers if needed
+		if time.Now().After(broker.heartbeat_at) {
+			broker.Purge()
+			for _, worker := range broker.waiting {
+				worker.Send(MDPW_HEARTBEAT, "", []string{})
+			}
+			broker.heartbeat_at = time.Now().Add(HEARTBEAT_INTERVAL)
+		}
+	}
+	log.Println("W: interrupt received, shutting down...")
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+// import (
+// 	"encoding/hex"
+// 	"encoding/json"
+// 	"reflect"
+// 	"strconv"
+// 	"time"
+
+// 	zmq "github.com/innotech/hydra/vendors/github.com/alecthomas/gozmq"
+
+// 	"github.com/innotech/hydra/log"
+// 	. "github.com/innotech/hydra/model/entity"
+// )
 
 type Broker interface {
 	Close()
