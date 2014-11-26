@@ -15,6 +15,7 @@ import (
 type BalancedInstancesController struct {
 	BasicController
 	loadBalancerAddress string
+	loadBalancerClient  *Client
 	requestTimeout      int
 }
 
@@ -24,6 +25,10 @@ func NewBalancedInstancesController(loadBalancerAddresss string, requestTimeout 
 	b.loadBalancerAddress = loadBalancerAddresss
 	b.requestTimeout = requestTimeout
 	var err error
+	b.loadBalancerClient, err = NewClient(b.loadBalancerAddress, b.requestTimeout)
+	if err != nil {
+		log.Fatal("LoadBalancer client can not connect to broker")
+	}
 	b.PathVariables, err = extractPathVariables(b.basePath)
 	if err != nil {
 		return nil, err
@@ -34,10 +39,7 @@ func NewBalancedInstancesController(loadBalancerAddresss string, requestTimeout 
 }
 
 func (b *BalancedInstancesController) sendZMQRequestToBalancer(app []byte, data [][]byte) (reply [][]byte) {
-	client := NewClient(b.loadBalancerAddress, b.requestTimeout)
-	defer client.Close()
-
-	reply = client.Send(app, data)
+	reply, _ = b.loadBalancerClient.Send(app, data)
 
 	return
 }
