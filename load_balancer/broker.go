@@ -84,8 +84,8 @@ func NewBroker(frontendEndpoint, tcpBackendEndpoint, inprocBackendEndpoint strin
 		frontendEndpoint:      frontendEndpoint,
 		inprocBackendEndpoint: inprocBackendEndpoint,
 		tcpBackendEndpoint:    tcpBackendEndpoint,
-		// chains:        make(map[string]lbChain),
-		services: make(map[string]*Service),
+		chains:                make(map[string]Chain),
+		services:              make(map[string]*Service),
 		// services:      make(map[string]*lbService),
 		workers: make(map[string]*Worker),
 		// workers:       make(map[string]*lbWorker),
@@ -268,6 +268,7 @@ func (b *Broker) dispatch(service *Service, msg [][]byte) {
 func (b *Broker) advanceShackle(chain Chain) {
 	elem := chain.shackles.Pop()
 	if elem == nil {
+		log.Debugf("LoadBalancer broker end of chain with last message %q\n", chain.msg)
 		instanceUrisMsg := b.decomposeMapOfInstancesMsg(chain.msg)
 		msg := [][]byte{[]byte(chain.client), nil, instanceUrisMsg}
 		b.frontendSocket.SendMessage(msg)
@@ -352,6 +353,7 @@ func (b *Broker) processWorkerMsg(sender []byte, msg [][]byte) {
 			b.workerWaiting(worker)
 		}
 	case SIGNAL_REPLY:
+		log.Debugf("LoadBalancer broker receive SIGNAL_REPLY with message %q\n", msg)
 		if workerReady {
 			//  Remove & save client return envelope and insert the
 			//  protocol header and service name, then rewrap envelope.
@@ -420,6 +422,7 @@ func (b *Broker) sendToWorker(worker *Worker, command string, option []byte, msg
 	}
 	msg = append([][]byte{worker.address, nil, []byte(command)}, msg...)
 
+	log.Debugf("LoadBalancer broker sending %q to worker %s\n", msg, worker.identity)
 	if worker.priorityLevel == 0 {
 		b.inprocBackendSocket.SendMessage(msg)
 	} else {
