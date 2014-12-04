@@ -1,14 +1,14 @@
+%define debug_package %{nil}
 Name: hydra-core
-Version: 3
+Version: 3.2.0
 Release: 1
 Summary: Hydra
-Source0: hydra-core-3.1.tar.gz
+Source0: hydra-core-3.2.0.tar.gz
 License: MIT
 Group: custom
 URL: https://github.com/innotech/hydra
 BuildArch: x86_64
 BuildRoot: %{_tmppath}/%{name}-buildroot
-Requires: libzmq3
 %description
 Hydra is multi-cloud application discovery, management and balancing service.
 Hydra attempts to ease the routing and balancing burden from servers and delegate it on the client (browser, mobile app, etc).

@@ -2,13 +2,16 @@
 
 # Hydra - Startup script for Hydra Server
 
-# chkconfig: 35 99 15
+# chkconfig: 03456 99 15
 # description: Service for application discovery, management and balancing services
 # processname: hydra
+#
+### BEGIN INIT INFO
 # Default-Start: 2 3 4 5
 # Default-Stop: 0 1 6
 # config: 
 # pidfile: /var/run/hydra.pid
+### END INIT INFO
 
 DISTRO_INFO=$(cat /proc/version)
 
@@ -27,6 +30,12 @@ PID_FILE=$PID_DIR/$PID_NAME
 LOCK_FILE=/var/lock/subsys/${APP_NAME}
 USER=root
 GROUP=root
+
+rh_status() {
+    status $PID_DIR/$APP_NAME $DAEMON
+    RETVAL=$?
+    return $RETVAL
+}
 
 case "$1" in
 start)
@@ -74,6 +83,9 @@ stop)
 restart)
   ${0} stop
   ${0} start
+  ;;
+status)
+    rh_status
   ;;
 *)
   echo "Usage: /etc/init.d/$NAME {start|stop|restart}"
