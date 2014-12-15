@@ -88,7 +88,7 @@ status)
     rh_status
   ;;
 *)
-  echo "Usage: /etc/init.d/$NAME {start|stop|restart}"
+  echo "Usage: /etc/init.d/$NAME {start|stop|restart|status}"
   exit 1
   ;;
 esac
