@@ -285,6 +285,7 @@ func (b *Broker) processClientMsg(client []byte, msg [][]byte) {
 	// Application + Services + Instances + Query params of client request
 	if len(msg) < 4 {
 		log.Warn("LoadBalancer broker invalid message received from client sender")
+		return
 	}
 
 	b.registerChain(client, msg)
